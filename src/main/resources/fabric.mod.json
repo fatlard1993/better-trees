@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "better-trees-justfatlard",
+  "version": "${version}",
+  "name": "Better Trees",
+  "description": "Replaces edge leaves on tree generation with leaf stair blocks for a more natural appearance.",
+  "authors": [
+    "justfatlard"
+  ],
+  "license": "MIT",
+  "icon": "assets/better-trees-justfatlard/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "justfatlard.better_trees.Main"
+    ]
+  },
+  "mixins": [
+    "better-trees.mixins.json"
+  ],
+  "accessWidener": "better-trees.accesswidener",
+  "depends": {
+    "fabricloader": ">=0.18.4",
+    "fabric-api": "*",
+    "minecraft": ">=26.1",
+    "java": ">=25",
+    "pandorical": "*"
+  }
+}

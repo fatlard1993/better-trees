@@ -1,0 +1,8 @@
+{
+    "parent": "better-trees-justfatlard:block/leaf_stairs_inner_geo",
+    "textures": {
+        "bottom": "minecraft:block/spruce_leaves",
+        "top":    "minecraft:block/spruce_leaves",
+        "side":   "minecraft:block/spruce_leaves"
+    }
+}
