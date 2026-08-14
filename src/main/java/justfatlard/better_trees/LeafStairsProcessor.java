@@ -16,7 +16,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Half;
 import net.minecraft.world.level.block.state.properties.StairsShape;
 import net.minecraft.world.level.chunk.ChunkGenerator;
-import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
+import net.minecraft.world.level.levelgen.feature.Feature;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -51,12 +51,8 @@ public class LeafStairsProcessor {
 
         List<Conversion> conversions = buildEdgeStairs(level, min, max);
 
-        // Inner top-layer pass: flood-fill inward from the outer edge stairs,
-        // converting every top-layer leaf (air above, solid below) that is one step
-        // further interior than the previous ring.  Each iteration adds one ring;
-        // the loop terminates when no new top-layer leaves remain reachable.
-        // half=TOP gives inner blocks a solid top surface (smooth from above) while
-        // the bevel shows on the bottom-exterior edge.
+        // Inner top-layer pass: flood-fill inward from the outer edge stairs, one ring
+        // per iteration, until no top-layer leaves remain; see buildInnerTopLayer.
         {
             Set<BlockPos> occupied = new HashSet<>();
             for (Conversion c : conversions) occupied.add(c.pos());
@@ -104,7 +100,7 @@ public class LeafStairsProcessor {
 
             if (openCount == 0) continue;
             if (openCount > 2) {
-                // Top-layer protrusions (arm-ends of thin discs) have 3–4 open horizontal
+                // Top-layer protrusions (arm-ends of thin discs) have 3-4 open horizontal
                 // sides and are skipped by the normal path, leaving the entire top disc
                 // unconverted.  Salvage them: if air above and solid below, emit a STRAIGHT
                 // BOTTOM-half stair facing toward the one solid neighbor (i.e. inward) so
@@ -160,7 +156,7 @@ public class LeafStairsProcessor {
      * converts that leaf if it is on the canopy's top layer (air above, solid below)
      * and not already claimed in {@code occupied}.
      *
-     * <p>Called iteratively from {@link #process} — each call adds one more ring of
+     * <p>Called iteratively from {@link #process}: each call adds one more ring of
      * half=TOP stairs until no more top-layer leaves remain reachable, ensuring the
      * entire flat cap is converted regardless of crown width.
      *
@@ -234,11 +230,11 @@ public class LeafStairsProcessor {
         Block dominantLog = dominant(logCounts);
         if (dominantLog == null) return false;
 
-        ResourceKey<ConfiguredFeature<?, ?>> fancyKey = AncientTrees.LOG_TO_FANCY.get(dominantLog);
+        ResourceKey<Feature> fancyKey = AncientTrees.LOG_TO_FANCY.get(dominantLog);
         if (fancyKey == null) return false;
 
-        Optional<Holder.Reference<ConfiguredFeature<?, ?>>> feature = level.registryAccess()
-            .lookupOrThrow(Registries.CONFIGURED_FEATURE)
+        Optional<Holder.Reference<Feature>> feature = level.registryAccess()
+            .lookupOrThrow(Registries.FEATURE)
             .get(fancyKey);
         if (feature.isEmpty()) return false;
 
@@ -256,7 +252,7 @@ public class LeafStairsProcessor {
             return false;
         }
 
-        // Fancy feature placed — now amplify it into a massive ancient form.
+        // Fancy feature placed; now amplify it into a massive ancient form.
         amplifyAncientTree(level, origin, random);
         return true;
     }
@@ -264,29 +260,9 @@ public class LeafStairsProcessor {
     // ── Ancient amplification ────────────────────────────────────────────────
 
     /**
-     * Amplifies the fancy feature that was just placed at {@code origin} into a
-     * truly massive ancient tree:
-     * <ul>
-     *   <li>Thickens the base trunk to a circle of radius 2 (~5 blocks wide)
-     *   <li>Extends the trunk 12–20 blocks above the fancy feature's topmost log
-     *   <li>Adds species-appropriate crown heads
-     * </ul>
-     * Crown topology per species:
-     * <ul>
-     *   <li><b>Oak</b> — 3 large spreading oblate crowns at slight XZ offsets,
-     *       simulating the characteristic multi-headed ancient oak silhouette
-     *   <li><b>Birch</b> — single graceful round crown; birch stays elegant, not bulky
-     *   <li><b>Spruce/conifer</b> — tall conical layered crown, each layer slightly
-     *       narrower; mimics a massive boreal giant
-     *   <li><b>Jungle</b> — two large spherical crowns, main + secondary offset,
-     *       giving the emergent jungle canopy look
-     *   <li><b>Mangrove</b> — compact double crown matching its dense natural form
-     * </ul>
-     */
-    /**
      * Amplifies the fancy feature just placed at {@code origin} into a massive
      * ancient form: thickens the trunk, extends it, then builds species-appropriate
-     * crown heads from horizontal disc layers (not spheroids — disc layers give the
+     * crown heads from horizontal disc layers (not spheroids: disc layers give the
      * characteristic Minecraft stepped silhouette and jagged edge).
      *
      * <p>Called for both sapling-grown ancient trees (from {@link TreeFeatureMixin}
@@ -381,17 +357,17 @@ public class LeafStairsProcessor {
             .setValue(LeavesBlock.PERSISTENT,  false)
             .setValue(LeavesBlock.WATERLOGGED, false);
 
-        int v = random.nextInt(2); // 0 or 1 — per-tree size variation
+        int v = random.nextInt(2); // 0 or 1: per-tree size variation
 
         // ── Species-appropriate crown placement ──────────────────────────────
 
         if (isAcacia) {
             // Acacia is defined by its flat-topped umbrella silhouette, not a dome.
             // Profile builds wide and STAYS wide at the top (the "table" surface),
-            // rather than narrowing off — bottom to top: narrow → wide → plateau.
+            // rather than narrowing off; bottom to top: narrow → wide → plateau.
             // Offset must clear the main crown's radius so the secondary umbrella is
             // visually distinct rather than subsumed.
-            int offset = 9 + random.nextInt(3);  // 9–11 — clears the radius-9 main crown
+            int offset = 9 + random.nextInt(3);  // 9-11: clears the radius-9 main crown
             Direction dir = HORIZONTALS[random.nextInt(4)];
 
             // Main: no gap above trunk (above(0)), flat plateau at top
@@ -406,7 +382,7 @@ public class LeafStairsProcessor {
             }
 
         } else if (isCherry) {
-            // Multi-headed cloud canopy — start crown at trunk top (above(-1)) so
+            // Multi-headed cloud canopy: start crown at trunk top (above(-1)) so
             // the trunk tip is nested inside the crown, not poking through it.
             // Two perpendicular secondary heads give the multi-direction blossom spread.
             int offset = 4 + random.nextInt(3);
@@ -443,7 +419,7 @@ public class LeafStairsProcessor {
             for (int i = 1; i <= offset;     i++) { BlockPos b = extTop.above(-1).relative(dir3, i); if (isOpen(level, b)) level.setBlock(b, logState, 4); }
 
         } else if (isPaleOak) {
-            // Eerie asymmetric spread — crown at above(0) so trunk doesn't poke
+            // Eerie asymmetric spread: crown at above(0) so trunk doesn't poke
             // above the canopy edge.  Wide offsets exaggerate the unbalanced silhouette.
             int offset = 6 + random.nextInt(3);
             Direction dir1 = HORIZONTALS[random.nextInt(4)];
@@ -459,13 +435,13 @@ public class LeafStairsProcessor {
             for (int i = 1; i <= offset - 2; i++) { BlockPos b = extTop.above(-2).relative(dir2, i); if (isOpen(level, b)) level.setBlock(b, logState, 4); }
 
         } else if (isBirch) {
-            // Crown wraps trunk top — starts 4 below extTop so no bare trunk visible.
+            // Crown wraps trunk top: starts 4 below extTop so no bare trunk visible.
             placeLoggedCluster(level, extTop.above(-4),
                          new int[]{ 1, 2, 3+v, 4+v, 4+v, 3+v, 3, 2, 1 }, crownLeaf, logState, random);
 
         } else if (isConifer) {
             // The cone begins directly above the MEGA_SPRUCE's original canopy top
-            // and ascends through the full extension — trunk is always inside foliage.
+            // and ascends through the full extension, so the trunk is always inside foliage.
             // Radius is capped at 6 so every leaf is within 6 hops of the trunk-log column.
             int baseR  = 6 + v;  // max 6 or 7, but cap below ensures ≤ 6
             int coneH  = extension + 3;
@@ -478,14 +454,14 @@ public class LeafStairsProcessor {
         } else if (isJungle) {
             // Two large canopies with a generous offset so they read as separate
             // emergent crowns rather than one merged blob.
-            int offset = 7 + random.nextInt(3);  // 7–9 — clears the radius-6 main crown
+            int offset = 7 + random.nextInt(3);  // 7-9: clears the radius-6 main crown
             placeLoggedCluster(level, extTop.above(0),
                          new int[]{ 4+v, 6+v, 6, 6, 6, 5+v, 3 }, crownLeaf, logState, random);
             placeLoggedCluster(level, extTop.above(-1).relative(HORIZONTALS[random.nextInt(4)], offset),
                          new int[]{ 3, 5+v, 6+v, 5+v, 3 }, crownLeaf, logState, random);
 
         } else if (isMangrove) {
-            // Two laterally displaced crowns — stacking them vertically with no offset
+            // Two laterally displaced crowns; stacking them vertically with no offset
             // produces a single merged blob.  A branch log connects to the secondary.
             int offset = 3 + random.nextInt(2);
             Direction dir = HORIZONTALS[random.nextInt(4)];
@@ -567,9 +543,8 @@ public class LeafStairsProcessor {
     }
 
     /**
-     * Stacks disc layers from {@code base} upward, one disc per entry in
-     * {@code radii}.  {@code radii[0]} is the bottom layer.
-     * The array of per-layer radii defines the crown profile (dome, cylinder, etc.).
+     * Stacks one disc per {@code radii} entry upward from {@code base};
+     * {@code radii[0]} is the bottom layer, so the array is the crown profile.
      */
     private static void placeCluster(LevelAccessor level, BlockPos base,
                                      int[] radii, BlockState leaf, RandomSource random) {
@@ -583,13 +558,11 @@ public class LeafStairsProcessor {
      * Like {@link #placeCluster} but adds a vertical log post through the cluster
      * centre and caps every layer's radius at 6.
      *
-     * <p>Why this matters: leaf distance propagates outward from logs.  A leaf
-     * survives only when it can reach a log within 6 hops.  Without an internal
-     * log, any leaf more than 6 blocks (Manhattan) from the nearest external log
-     * decays immediately.  The central post acts as a permanent anchor — logs never
-     * decay regardless of trunk connectivity — so every leaf within horizontal
-     * radius 6 of the post (at the same Y level as a post block) is guaranteed
-     * distance ≤ 6 and will not decay.  Capping radius at 6 enforces this.</p>
+     * <p>Leaf distance propagates outward from logs, and a leaf survives only when
+     * it can reach a log within 6 hops. The central post is a permanent anchor
+     * (logs never decay regardless of trunk connectivity), so every leaf within
+     * horizontal radius 6 of the post is guaranteed distance &le; 6 and will not
+     * decay. Capping radius at 6 enforces this.</p>
      */
     private static void placeLoggedCluster(LevelAccessor level, BlockPos base,
                                             int[] radii, BlockState leaf, BlockState log,
@@ -602,7 +575,7 @@ public class LeafStairsProcessor {
                 level.setBlock(lp, log, 4);
             }
         }
-        // Leaves — radius capped at 6 so no leaf is ever > 6 horizontal hops from the post.
+        // Leaves: radius capped at 6 so no leaf is ever > 6 horizontal hops from the post.
         for (int dy = 0; dy < radii.length; dy++) {
             int r = Math.min(radii[dy], 6);
             if (r > 0) placeDisc(level, base.above(dy), r, leaf, random);

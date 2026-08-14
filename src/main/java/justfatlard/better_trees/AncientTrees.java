@@ -5,7 +5,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.grower.TreeGrower;
-import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
+import net.minecraft.world.level.levelgen.feature.Feature;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -20,12 +20,12 @@ public class AncientTrees {
 
     // ── Sapling redirect ─────────────────────────────────────────────────────
     // All 9 TreeGrower singletons are covered.
-    // Species without a larger vanilla variant map to their own feature —
+    // Species without a larger vanilla variant map to their own feature;
     // amplifyAncientTree handles the size increase regardless.
 
-    public static final Map<TreeGrower, ResourceKey<ConfiguredFeature<?, ?>>> FANCY_VARIANTS;
+    public static final Map<TreeGrower, ResourceKey<Feature>> FANCY_VARIANTS;
     static {
-        IdentityHashMap<TreeGrower, ResourceKey<ConfiguredFeature<?, ?>>> m = new IdentityHashMap<>();
+        IdentityHashMap<TreeGrower, ResourceKey<Feature>> m = new IdentityHashMap<>();
         m.put(TreeGrower.OAK,      TreeFeatures.FANCY_OAK);
         m.put(TreeGrower.BIRCH,    TreeFeatures.SUPER_BIRCH_BEES_0002);
         m.put(TreeGrower.SPRUCE,   TreeFeatures.MEGA_SPRUCE);
@@ -43,9 +43,9 @@ public class AncientTrees {
     // Maps the dominant log type of a placed worldgen tree to its fancy feature.
     // Azalea trees use OAK_LOG so they are handled by the OAK entry automatically.
 
-    public static final Map<Block, ResourceKey<ConfiguredFeature<?, ?>>> LOG_TO_FANCY;
+    public static final Map<Block, ResourceKey<Feature>> LOG_TO_FANCY;
     static {
-        Map<Block, ResourceKey<ConfiguredFeature<?, ?>>> m = new java.util.HashMap<>();
+        Map<Block, ResourceKey<Feature>> m = new java.util.HashMap<>();
         m.put(Blocks.OAK_LOG,      TreeFeatures.FANCY_OAK);
         m.put(Blocks.BIRCH_LOG,    TreeFeatures.SUPER_BIRCH_BEES_0002);
         m.put(Blocks.SPRUCE_LOG,   TreeFeatures.MEGA_SPRUCE);

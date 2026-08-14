@@ -1,6 +1,5 @@
 package justfatlard.better_trees;
 
-import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -9,11 +8,11 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.sounds.AmbientLeavesBlockSoundPlayer;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
@@ -35,7 +34,7 @@ public class LeafStairsBlock extends LeavesBlock {
     public static final EnumProperty<StairsShape> STAIRS_SHAPE = BlockStateProperties.STAIRS_SHAPE;
 
     public LeafStairsBlock(BlockBehaviour.Properties properties) {
-        super(0.1f, properties);
+        super(AmbientLeavesBlockSoundPlayer.noAmbientSound(), properties);
         this.registerDefaultState(
             this.getStateDefinition().any()
                 .setValue(HORIZONTAL_FACING, Direction.NORTH)
@@ -57,11 +56,6 @@ public class LeafStairsBlock extends LeavesBlock {
         builder.add(LeavesBlock.DISTANCE, LeavesBlock.PERSISTENT, WATERLOGGED, HORIZONTAL_FACING, HALF, STAIRS_SHAPE);
     }
 
-    @Override
-    public MapCodec<? extends LeavesBlock> codec() {
-        return simpleCodec(LeafStairsBlock::new);
-    }
-
     // ── Liquid / waterlogging ────────────────────────────────────────────────
 
     /** Leaf stairs are never waterlogged. */
@@ -77,14 +71,14 @@ public class LeafStairsBlock extends LeavesBlock {
         return false;
     }
 
-    /** No liquid to place — always a no-op. */
+    /** No liquid to place; always a no-op. */
     @Override
     public boolean placeLiquid(LevelAccessor level, BlockPos pos, BlockState state,
                                FluidState fluidState) {
         return false;
     }
 
-    /** No liquid stored — bucket pickup always returns empty. */
+    /** No liquid stored; bucket pickup always returns empty. */
     @Override
     public ItemStack pickupBlock(LivingEntity entity, LevelAccessor level, BlockPos pos,
                                  BlockState state) {
@@ -94,7 +88,7 @@ public class LeafStairsBlock extends LeavesBlock {
     // ── Placement ────────────────────────────────────────────────────────────
 
     /**
-     * Player-placed leaf stairs use the default state — non-persistent, no waterlogging.
+     * Player-placed leaf stairs use the default state: non-persistent, no waterlogging.
      * (Vanilla LeavesBlock.getStateForPlacement sets PERSISTENT=true and checks for water,
      * both of which we've removed from the state definition.)
      */
@@ -117,8 +111,8 @@ public class LeafStairsBlock extends LeavesBlock {
 
     /**
      * Distance-based decay is handled by scheduled ticks (see updateShape / tick).
-     * Returning false here ensures the random-tick system never drives decay for
-     * this block — we use the faster scheduled-tick path instead.
+     * Returning false keeps the random-tick system from ever driving decay for
+     * this block.
      */
     @Override
     protected boolean isRandomlyTicking(BlockState state) {
@@ -127,7 +121,7 @@ public class LeafStairsBlock extends LeavesBlock {
 
     /**
      * A leaf stair is decaying when it can no longer reach a log within 7 hops.
-     * PERSISTENT is absent from our state — all leaf stairs always decay when
+     * PERSISTENT is absent from our state, so all leaf stairs decay when
      * disconnected from wood.
      */
     @Override
@@ -138,13 +132,13 @@ public class LeafStairsBlock extends LeavesBlock {
     /**
      * Replicates LeavesBlock.updateShape without the WATERLOGGED fluid-tick side-effect.
      *
-     * <p>LeavesBlock.updateShape (MC 26.1) does three things:
+     * <p>LeavesBlock.updateShape (MC 26.1) does the following:
      * <ol>
-     *   <li>If WATERLOGGED, schedule a water tick — we skip this entirely.
+     *   <li>If WATERLOGGED, schedule a water tick; we skip this entirely.
      *   <li>Compute {@code dist = getDistanceAt(neighbor) + 1}.
      *   <li>If dist ≠ 1 or current DISTANCE ≠ dist, schedule a block tick for distance
      *       recalculation (handled by tick → super.tick → updateDistance).
-     *   <li>Return the state <em>unchanged</em> — the distance value itself is only
+     *   <li>Return the state <em>unchanged</em>; the distance value itself is only
      *       written inside tick().
      * </ol>
      */
@@ -159,11 +153,9 @@ public class LeafStairsBlock extends LeavesBlock {
         return state;
     }
 
-    @Override
-    protected void spawnFallingLeavesParticle(Level level, BlockPos pos, RandomSource random) {
-        // Suppress falling-leaf particles — placed by the mod, not the player,
-        // and particle spam at every tree boundary would be noisy.
-    }
+    // Falling-leaf particles are only spawned by FallingParticlesLeavesBlock subclasses;
+    // plain LeavesBlock (which this extends) never spawns them, so no override is needed
+    // to suppress them here.
 
     /**
      * When a scheduled tick fires:
@@ -172,8 +164,8 @@ public class LeafStairsBlock extends LeavesBlock {
      *   <li>Otherwise → delegate to super.tick() which calls the private updateDistance,
      *       recalculating DISTANCE from all neighbors and writing the new value.
      * </ul>
-     * Hand-placed (PERSISTENT) leaf stairs no longer exist — all leaf stairs decay
-     * when disconnected from wood.
+     * PERSISTENT leaf stairs do not exist here; every leaf stair decays when
+     * disconnected from wood.
      */
     @Override
     public void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
@@ -198,7 +190,7 @@ public class LeafStairsBlock extends LeavesBlock {
         }
     }
 
-    /** Decay is driven by tick() via scheduled ticks — randomTick is intentionally suppressed. */
+    /** Decay is driven by tick() via scheduled ticks; randomTick is intentionally suppressed. */
     @Override
     protected void randomTick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
     }

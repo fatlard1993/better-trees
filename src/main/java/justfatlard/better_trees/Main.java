@@ -65,8 +65,28 @@ public class Main implements ModInitializer {
 
         if (pandorical) {
             PandoricalApi.content().registerModAssets(MOD_ID);
+            registerBlockTints();
         }
 
         System.out.println("[" + MOD_ID + "] Loaded better-trees");
+    }
+
+    /**
+     * Matches vanilla's per-species leaf tint: oak/jungle/acacia/dark_oak/mangrove use
+     * biome-dependent foliage color; spruce/birch use fixed constants; cherry/pale_oak
+     * are untinted in vanilla, so their stairs need no registration either.
+     */
+    private static void registerBlockTints() {
+        var tints = PandoricalApi.blockTints();
+
+        tints.foliage(
+            MOD_ID + ":oak_leaf_stairs",
+            MOD_ID + ":jungle_leaf_stairs",
+            MOD_ID + ":acacia_leaf_stairs",
+            MOD_ID + ":dark_oak_leaf_stairs",
+            MOD_ID + ":mangrove_leaf_stairs"
+        );
+        tints.constant(0x619961, MOD_ID + ":spruce_leaf_stairs");
+        tints.constant(0x80a755, MOD_ID + ":birch_leaf_stairs");
     }
 }
