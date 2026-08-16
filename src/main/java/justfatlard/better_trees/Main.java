@@ -86,7 +86,10 @@ public class Main implements ModInitializer {
             MOD_ID + ":dark_oak_leaf_stairs",
             MOD_ID + ":mangrove_leaf_stairs"
         );
-        tints.constant(0x619961, MOD_ID + ":spruce_leaf_stairs");
-        tints.constant(0x80a755, MOD_ID + ":birch_leaf_stairs");
+        // ARGB, not RGB: the tint is fed to ARGB.multiply against the quad color, so
+        // a zero alpha byte multiplies the quad's alpha to zero. These are exactly
+        // vanilla's FoliageColor.FOLIAGE_EVERGREEN / FOLIAGE_BIRCH, alpha included.
+        tints.constant(0xFF619961, MOD_ID + ":spruce_leaf_stairs");
+        tints.constant(0xFF80A755, MOD_ID + ":birch_leaf_stairs");
     }
 }
