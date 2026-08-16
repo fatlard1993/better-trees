@@ -10,18 +10,14 @@ A Fabric mod that makes vanilla trees look more natural by replacing the leaf bl
 - **Ancient trees**: a small chance (roughly 1% from saplings, 0.5% during worldgen) for a tree to grow as its larger fancy/mega variant instead of the normal form, for the species that have one
 - **Correct leaf tinting**: leaf stairs are colored to match their parent leaf type (biome-dependent foliage color for most species, fixed tints for spruce/birch, untinted for cherry/pale oak) on Pandorical clients
 
-## Requirements
-
-Targets the Minecraft, Fabric Loader, and Fabric API versions declared in this mod's `gradle.properties`; check there for the exact currently-supported version.
-
 ## Pandorical
 
 Better Trees uses Pandorical to register its leaf stairs blocks (visually based on the corresponding vanilla leaves block) and to apply the correct per-species leaf tint so the stairs blend in with their parent tree. Pandorical is declared as a hard dependency (`fabric.mod.json`), so it must be installed alongside this mod, on both server and client, for the mod to load at all; there is no vanilla-client fallback.
 
 ## Installation
 
-Install alongside its declared dependencies (see `fabric.mod.json`).
+Install server-side alongside its declared dependencies (see `fabric.mod.json`); connecting clients need only Pandorical. Version targets live in `gradle.properties` (Minecraft, loader, Fabric API) and `fabric.mod.json` (Java).
 
 ## License
 
-MIT License (see `fabric.mod.json`).
+MIT, see [LICENSE](LICENSE).
