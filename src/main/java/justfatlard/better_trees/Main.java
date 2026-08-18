@@ -55,6 +55,13 @@ public class Main implements ModInitializer {
             LEAF_STAIRS_MAP.put(vanillaLeaves, stairsBlock);
             Registry.register(BuiltInRegistries.BLOCK, Identifier.fromNamespaceAndPath(MOD_ID, blockId), stairsBlock);
 
+            // No item is ever registered for these, so anything wanting to draw one
+            // has to be told what to draw instead.
+            if (net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("block-tip")) {
+                justfatlard.better_trees.integration.LeafTipRegistration.register(
+                    blockId, BuiltInRegistries.BLOCK.getKey(vanillaLeaves).toString());
+            }
+
             if (pandorical) {
                 PandoricalApi.content().registerBlock(
                     MOD_ID + ":" + blockId,
