@@ -2,7 +2,6 @@ package justfatlard.better_trees;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -145,38 +144,18 @@ public class LeafStairsBlock extends LeavesBlock {
 
     // ── Decay ────────────────────────────────────────────────────────────────
 
-    /**
-     * Distance-based decay is handled by scheduled ticks (see updateShape / tick).
-     * Returning false keeps the random-tick system from ever driving decay for
-     * this block.
-     */
-    @Override
-    protected boolean isRandomlyTicking(BlockState state) {
-        return false;
-    }
+    // Decay is LeavesBlock's, inherited whole: the scheduled tick walks DISTANCE up to 7, and a
+    // random tick after that drops the block. PERSISTENT is in the state definition and never
+    // set, so a leaf stair decays exactly when the leaf it replaced would have.
+    //
+    // Removing the block from the scheduled tick instead put the shell and the vanilla leaves it
+    // wraps on two clocks: felling a tree stripped the crown within a tick and left the core
+    // hanging for the usual minutes. One clock means the shared code, not a copy of it.
 
     /**
-     * A leaf stair is decaying when it can no longer reach a log within 7 hops.
-     * PERSISTENT is absent from our state, so all leaf stairs decay when
-     * disconnected from wood.
-     */
-    @Override
-    protected boolean decaying(BlockState state) {
-        return state.getValue(LeavesBlock.DISTANCE) == 7;
-    }
-
-    /**
-     * Replicates LeavesBlock.updateShape without the WATERLOGGED fluid-tick side-effect.
-     *
-     * <p>LeavesBlock.updateShape (MC 26.1) does the following:
-     * <ol>
-     *   <li>If WATERLOGGED, schedule a water tick; we skip this entirely.
-     *   <li>Compute {@code dist = getDistanceAt(neighbor) + 1}.
-     *   <li>If dist ≠ 1 or current DISTANCE ≠ dist, schedule a block tick for distance
-     *       recalculation (handled by tick → super.tick → updateDistance).
-     *   <li>Return the state <em>unchanged</em>; the distance value itself is only
-     *       written inside tick().
-     * </ol>
+     * Replicates LeavesBlock.updateShape without the WATERLOGGED fluid-tick side-effect: a
+     * neighbour change reschedules the distance tick, and the distance itself is written by
+     * {@link LeavesBlock#tick}. The state is returned unchanged.
      */
     @Override
     protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess tickView,
@@ -192,42 +171,4 @@ public class LeafStairsBlock extends LeavesBlock {
     // Falling-leaf particles are only spawned by FallingParticlesLeavesBlock subclasses;
     // plain LeavesBlock (which this extends) never spawns them, so no override is needed
     // to suppress them here.
-
-    /**
-     * When a scheduled tick fires:
-     * <ul>
-     *   <li>If distance is already 7 (disconnected from wood) → drop loot and remove instantly.
-     *   <li>Otherwise → delegate to super.tick() which calls the private updateDistance,
-     *       recalculating DISTANCE from all neighbors and writing the new value.
-     * </ul>
-     * PERSISTENT leaf stairs do not exist here; every leaf stair decays when
-     * disconnected from wood.
-     */
-    @Override
-    public void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
-        BlockState current = level.getBlockState(pos);
-        if (!(current.getBlock() instanceof LeafStairsBlock)) return;
-
-        // Recalculate distance from all 6 neighbors inline.
-        // Calling super.tick() (LeavesBlock.tick) updates DISTANCE via level.setBlock
-        // but never removes the block when the result is 7, leaving leaf stairs floating
-        // permanently after a tree is cut.  Doing it here lets us handle decay correctly.
-        int dist = 7;
-        for (Direction dir : Direction.values()) {
-            dist = Math.min(dist,
-                LeavesBlock.getOptionalDistanceAt(level.getBlockState(pos.relative(dir))).orElse(7) + 1);
-        }
-
-        if (dist >= 7) {
-            dropResources(current, level, pos);
-            level.removeBlock(pos, false);
-        } else if (dist != current.getValue(LeavesBlock.DISTANCE)) {
-            level.setBlock(pos, current.setValue(LeavesBlock.DISTANCE, dist), 3);
-        }
-    }
-
-    /** Decay is driven by tick() via scheduled ticks; randomTick is intentionally suppressed. */
-    @Override
-    protected void randomTick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
-    }
 }
