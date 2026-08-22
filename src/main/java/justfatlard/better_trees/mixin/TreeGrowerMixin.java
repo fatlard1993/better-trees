@@ -37,9 +37,17 @@ public class TreeGrowerMixin {
     ) {
         ResourceKey<Feature> fancyKey =
             AncientTrees.FANCY_VARIANTS.get((TreeGrower) (Object) this);
-        if (fancyKey == null) return;
 
         if (random.nextFloat() >= AncientTrees.ANCIENT_CHANCE) return;
+
+        // No bigger variant for this species: mark it and get out of the way. Vanilla grows whatever
+        // the sapling would have grown, and TreeFeatureMixin amplifies it on the way out. Poplar
+        // needs this - one grower picks between three leaf colours, and naming a feature here would
+        // pin every ancient poplar to whichever colour was named.
+        if (fancyKey == null) {
+            AncientTrees.markAncient();
+            return;
+        }
 
         Optional<Holder.Reference<Feature>> feature = level.registryAccess()
             .lookupOrThrow(Registries.FEATURE)

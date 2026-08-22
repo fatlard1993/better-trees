@@ -33,6 +33,10 @@ public class Main implements ModInitializer {
         { Blocks.CHERRY_LEAVES,    "cherry"    },
         { Blocks.MANGROVE_LEAVES,  "mangrove"  },
         { Blocks.PALE_OAK_LEAVES,  "pale_oak"  },
+        // Poplar arrived in 26.3 with three leaf colours off a single log and a single grower.
+        { Blocks.RED_POPLAR_LEAVES,    "red_poplar"    },
+        { Blocks.ORANGE_POPLAR_LEAVES, "orange_poplar" },
+        { Blocks.YELLOW_POPLAR_LEAVES, "yellow_poplar" },
     };
 
     @Override

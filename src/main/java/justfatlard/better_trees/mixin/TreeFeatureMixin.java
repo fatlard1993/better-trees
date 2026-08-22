@@ -4,6 +4,7 @@ import justfatlard.better_trees.AncientTrees;
 import justfatlard.better_trees.LeafStairsProcessor;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
+import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.feature.TreeFeature;
@@ -26,6 +27,23 @@ public class TreeFeatureMixin {
         // The outer call handles all amplification + edge-stair processing.
         if (AncientTrees.isInAncientPlacement()) return;
 
+        // Only worldgen is fenced in. A WorldGenRegion is a chunk being built with its neighbours
+        // half-finished, so reaching too far reads terrain that does not exist yet; a ServerLevel is
+        // a sapling growing in a world where everything around it is already loaded and there is
+        // nothing to protect. Both arrive here as WorldGenLevel, so the distinction has to be drawn
+        // on the concrete type.
+        boolean fenced = level instanceof WorldGenRegion;
+        if (fenced) AncientTrees.limitReachTo(pos);
+
+        try {
+            postProcess(level, chunkGenerator, random, pos);
+        } finally {
+            if (fenced) AncientTrees.clearReachLimit();
+        }
+    }
+
+    private static void postProcess(WorldGenLevel level, ChunkGenerator chunkGenerator,
+            RandomSource random, BlockPos pos) {
         boolean ancient = AncientTrees.consumeAncient(); // true for sapling-grown fancy variants
 
         if (ancient) {

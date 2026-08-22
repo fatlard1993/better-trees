@@ -6,6 +6,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.grower.TreeGrower;
 import net.minecraft.world.level.levelgen.feature.Feature;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -19,9 +20,10 @@ public class AncientTrees {
     public static final float WORLDGEN_ANCIENT_CHANCE = 0.005f;
 
     // ── Sapling redirect ─────────────────────────────────────────────────────
-    // All 9 TreeGrower singletons are covered.
-    // Species without a larger vanilla variant map to their own feature;
-    // amplifyAncientTree handles the size increase regardless.
+    // Species with a larger vanilla variant to swap in. Anything absent from this map is not
+    // excluded from ancient growth: it is amplified where it stands instead, which is what poplar
+    // wants, since one grower there picks between three leaf colours and naming a feature would pin
+    // every ancient poplar to one of them.
 
     public static final Map<TreeGrower, ResourceKey<Feature>> FANCY_VARIANTS;
     static {
@@ -56,6 +58,57 @@ public class AncientTrees {
         m.put(Blocks.DARK_OAK_LOG, TreeFeatures.DARK_OAK);
         m.put(Blocks.PALE_OAK_LOG, TreeFeatures.PALE_OAK_BONEMEAL);
         LOG_TO_FANCY = m;
+    }
+
+    // ── Worldgen reach limit ─────────────────────────────────────────────────
+
+    /**
+     * Furthest, horizontally, that tree post-processing may touch from the tree's own origin
+     * while a chunk is being generated.
+     *
+     * <p>During the features step a feature owns its chunk and the ring around it - chunks
+     * {@code C-1} through {@code C+1}, which is blocks {@code 16C-16} through {@code 16C+31}. A tree
+     * can be planted anywhere in its chunk, so the only offset that is safe wherever it lands is
+     * sixteen. Reading past that touches a chunk that has not finished its own generation yet, which
+     * the game reports as an unsafe terrain read: worldgen stops being deterministic, and in the bad
+     * case it deadlocks.
+     *
+     * <p>Ancient trees were overrunning it in two places - the halo extends one block past a scan box
+     * already sized at exactly sixteen, and an acacia's secondary umbrella sits up to eleven out with
+     * a radius-eight crown on it, so nineteen.
+     */
+    public static final int WORLDGEN_REACH = 16;
+
+    /** Far enough out to be no bound at all; a tree's limit is horizontal only. */
+    private static final int NO_VERTICAL_LIMIT = 30_000_000;
+
+    /**
+     * Region the current context may read or write, or null when nothing needs restraining.
+     *
+     * <p>Null is the normal case for a sapling grown on a live server: every chunk it could reach is
+     * already loaded. The two worldgen callers each have their own shape of limit - a tree gets a
+     * square around its trunk, a structure template gets the box its placement was clipped to - so
+     * this holds the region itself rather than an origin to measure from.
+     */
+    private static final ThreadLocal<BoundingBox> ALLOWED_REGION = new ThreadLocal<>();
+
+    /** Limits reach to {@link #WORLDGEN_REACH} blocks horizontally around a tree's origin. */
+    public static void limitReachTo(net.minecraft.core.BlockPos origin) {
+        ALLOWED_REGION.set(new BoundingBox(
+            origin.getX() - WORLDGEN_REACH, -NO_VERTICAL_LIMIT, origin.getZ() - WORLDGEN_REACH,
+            origin.getX() + WORLDGEN_REACH,  NO_VERTICAL_LIMIT, origin.getZ() + WORLDGEN_REACH));
+    }
+
+    /** Limits reach to an explicit region, for callers that already know their own bounds. */
+    public static void limitReachTo(BoundingBox region) { ALLOWED_REGION.set(region); }
+
+    public static void clearReachLimit() { ALLOWED_REGION.remove(); }
+
+    /** Whether the current context is allowed to read or write at this position. */
+    public static boolean reachable(net.minecraft.core.BlockPos pos) {
+        BoundingBox region = ALLOWED_REGION.get();
+
+        return region == null || region.isInside(pos);
     }
 
     // ── Runtime flags ────────────────────────────────────────────────────────

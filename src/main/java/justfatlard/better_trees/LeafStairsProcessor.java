@@ -46,9 +46,17 @@ public class LeafStairsProcessor {
         int hRad = ancient ? 16 : 8;
         int maxY  = ancient ? 65 : 16;
 
-        BlockPos min = origin.offset(-hRad, 0, -hRad);
-        BlockPos max = origin.offset( hRad, maxY,  hRad);
+        processBox(level, origin.offset(-hRad, 0, -hRad), origin.offset(hRad, maxY, hRad), ancient);
+    }
 
+    /**
+     * Converts every leaf edge inside an explicit box.
+     *
+     * <p>Trees drawn into a structure template arrive here rather than through {@link #process}:
+     * they are template blocks, never grown by a feature, so there is no trunk origin to measure a
+     * scan radius from - only the box the placement wrote into.
+     */
+    public static void processBox(LevelAccessor level, BlockPos min, BlockPos max, boolean ancient) {
         List<Conversion> conversions = buildEdgeStairs(level, min, max);
 
         // Inner top-layer pass: flood-fill inward from the outer edge stairs, one ring
@@ -69,7 +77,7 @@ public class LeafStairsProcessor {
         }
 
         for (Conversion c : conversions) {
-            level.setBlock(c.pos(), c.state(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+            setGuarded(level, c.pos(), c.state(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
         }
     }
 
@@ -80,7 +88,7 @@ public class LeafStairsProcessor {
         List<Conversion> conversions = new ArrayList<>();
 
         for (BlockPos cursor : BlockPos.betweenClosed(min, max)) {
-            BlockState state = level.getBlockState(cursor);
+            BlockState state = stateAt(level, cursor);
 
             if (!state.is(BlockTags.LEAVES)) continue;
             if (state.getValue(LeavesBlock.PERSISTENT)) continue;
@@ -177,7 +185,7 @@ public class LeafStairsProcessor {
 
             if (!occupied.add(innerPos)) continue; // already claimed
 
-            BlockState inner = level.getBlockState(innerPos);
+            BlockState inner = stateAt(level, innerPos);
             if (!inner.is(BlockTags.LEAVES))             continue;
             if (inner.getValue(LeavesBlock.PERSISTENT))  continue;
             if (inner.getBlock() instanceof LeafStairsBlock) continue;
@@ -224,14 +232,25 @@ public class LeafStairsProcessor {
         // Determine species from dominant log type.
         Map<Block, Integer> logCounts = new HashMap<>();
         for (BlockPos cursor : BlockPos.betweenClosed(min, max)) {
-            BlockState s = level.getBlockState(cursor);
+            BlockState s = stateAt(level, cursor);
             if (s.is(BlockTags.LOGS)) logCounts.merge(s.getBlock(), 1, Integer::sum);
         }
         Block dominantLog = dominant(logCounts);
         if (dominantLog == null) return false;
 
         ResourceKey<Feature> fancyKey = AncientTrees.LOG_TO_FANCY.get(dominantLog);
-        if (fancyKey == null) return false;
+
+        // No bigger variant to swap in, so grow the ancient form out of the tree already standing.
+        //
+        // Poplar is why this exists. It has three leaf colours behind one log, so there is no single
+        // feature that can be substituted without repainting two thirds of the poplars that go
+        // ancient. Amplifying in place reads the dominant leaf from the tree itself, so a yellow
+        // poplar stays yellow. Bailing out here, which is what used to happen, meant poplar could
+        // never be ancient at all.
+        if (fancyKey == null) {
+            amplifyAncientTree(level, origin, random);
+            return true;
+        }
 
         Optional<Holder.Reference<Feature>> feature = level.registryAccess()
             .lookupOrThrow(Registries.FEATURE)
@@ -241,14 +260,14 @@ public class LeafStairsProcessor {
         // Save existing tree for restoration on failure.
         Map<BlockPos, BlockState> saved = new HashMap<>();
         for (BlockPos cursor : BlockPos.betweenClosed(min, max)) {
-            BlockState s = level.getBlockState(cursor);
+            BlockState s = stateAt(level, cursor);
             if (s.is(BlockTags.LOGS) || (s.is(BlockTags.LEAVES) && !s.getValue(LeavesBlock.PERSISTENT)))
                 saved.put(cursor.immutable(), s);
         }
-        for (BlockPos pos : saved.keySet()) level.setBlock(pos, Blocks.AIR.defaultBlockState(), 4);
+        for (BlockPos pos : saved.keySet()) setGuarded(level, pos, Blocks.AIR.defaultBlockState(), 4);
 
         if (!feature.get().value().place(level, chunkGenerator, random, origin)) {
-            for (Map.Entry<BlockPos, BlockState> e : saved.entrySet()) level.setBlock(e.getKey(), e.getValue(), 4);
+            for (Map.Entry<BlockPos, BlockState> e : saved.entrySet()) setGuarded(level, e.getKey(), e.getValue(), 4);
             return false;
         }
 
@@ -279,7 +298,7 @@ public class LeafStairsProcessor {
         int topmostLogY = origin.getY();
 
         for (BlockPos cursor : BlockPos.betweenClosed(surveyMin, surveyMax)) {
-            BlockState s = level.getBlockState(cursor);
+            BlockState s = stateAt(level, cursor);
             if (s.is(BlockTags.LOGS)) {
                 logCounts.merge(s.getBlock(), 1, Integer::sum);
                 topmostLogY = Math.max(topmostLogY, cursor.getY());
@@ -318,9 +337,9 @@ public class LeafStairsProcessor {
                 for (int dz = -r; dz <= r; dz++) {
                     if (dx * dx + dz * dz <= r * r) {
                         BlockPos lp = new BlockPos(origin.getX() + dx, y, origin.getZ() + dz);
-                        BlockState there = level.getBlockState(lp);
+                        BlockState there = stateAt(level, lp);
                         if (there.isAir() || (there.is(BlockTags.LEAVES) && !there.getValue(LeavesBlock.PERSISTENT)))
-                            level.setBlock(lp, logState, 4);
+                            setGuarded(level, lp, logState, 4);
                     }
                 }
             }
@@ -345,7 +364,7 @@ public class LeafStairsProcessor {
                 for (int dz = -extRadius; dz <= extRadius; dz++) {
                     if (dx * dx + dz * dz <= extRadius * extRadius) {
                         BlockPos lp = extTop.above(i).offset(dx, 0, dz);
-                        if (isOpen(level, lp)) level.setBlock(lp, logState, 4);
+                        if (isOpen(level, lp)) setGuarded(level, lp, logState, 4);
                     }
                 }
             }
@@ -378,7 +397,7 @@ public class LeafStairsProcessor {
                          new int[]{ 1, 2+v, 5+v, 7+v, 7+v, 6+v }, crownLeaf, logState, random);
             for (int i = 1; i <= offset; i++) {
                 BlockPos b = extTop.above(-3).relative(dir, i);
-                if (isOpen(level, b)) level.setBlock(b, logState, 4);
+                if (isOpen(level, b)) setGuarded(level, b, logState, 4);
             }
 
         } else if (isCherry) {
@@ -395,8 +414,8 @@ public class LeafStairsProcessor {
                          new int[]{ 2, 4+v, 5+v, 5+v, 3+v, 2 }, crownLeaf, logState, random);
             placeLoggedCluster(level, extTop.above(-2).relative(dir2, offset - 1),
                          new int[]{ 2, 3+v, 5+v, 4+v, 2 }, crownLeaf, logState, random);
-            for (int i = 1; i <= offset;     i++) { BlockPos b = extTop.above(-1).relative(dir1, i); if (isOpen(level, b)) level.setBlock(b, logState, 4); }
-            for (int i = 1; i <= offset - 1; i++) { BlockPos b = extTop.above(-2).relative(dir2, i); if (isOpen(level, b)) level.setBlock(b, logState, 4); }
+            for (int i = 1; i <= offset;     i++) { BlockPos b = extTop.above(-1).relative(dir1, i); if (isOpen(level, b)) setGuarded(level, b, logState, 4); }
+            for (int i = 1; i <= offset - 1; i++) { BlockPos b = extTop.above(-2).relative(dir2, i); if (isOpen(level, b)) setGuarded(level, b, logState, 4); }
 
         } else if (isDarkOak) {
             // Very dense multi-head canopy; crown starts at above(0) so the
@@ -414,9 +433,9 @@ public class LeafStairsProcessor {
                          new int[]{ 3+v, 5+v, 6+v, 5+v, 3+v, 2 }, crownLeaf, logState, random);
             placeLoggedCluster(level, extTop.above(-1).relative(dir3, offset),
                          new int[]{ 3, 5+v, 6+v, 5+v, 3 }, crownLeaf, logState, random);
-            for (int i = 1; i <= offset;     i++) { BlockPos b = extTop.above(-1).relative(dir1, i); if (isOpen(level, b)) level.setBlock(b, logState, 4); }
-            for (int i = 1; i <= offset - 1; i++) { BlockPos b = extTop.above(-2).relative(dir2, i); if (isOpen(level, b)) level.setBlock(b, logState, 4); }
-            for (int i = 1; i <= offset;     i++) { BlockPos b = extTop.above(-1).relative(dir3, i); if (isOpen(level, b)) level.setBlock(b, logState, 4); }
+            for (int i = 1; i <= offset;     i++) { BlockPos b = extTop.above(-1).relative(dir1, i); if (isOpen(level, b)) setGuarded(level, b, logState, 4); }
+            for (int i = 1; i <= offset - 1; i++) { BlockPos b = extTop.above(-2).relative(dir2, i); if (isOpen(level, b)) setGuarded(level, b, logState, 4); }
+            for (int i = 1; i <= offset;     i++) { BlockPos b = extTop.above(-1).relative(dir3, i); if (isOpen(level, b)) setGuarded(level, b, logState, 4); }
 
         } else if (isPaleOak) {
             // Eerie asymmetric spread: crown at above(0) so trunk doesn't poke
@@ -431,8 +450,8 @@ public class LeafStairsProcessor {
                          new int[]{ 3+v, 6+v, 7+v, 6+v, 4+v, 2 }, crownLeaf, logState, random);
             placeLoggedCluster(level, extTop.above(-2).relative(dir2, offset - 2),
                          new int[]{ 2, 4+v, 5+v, 5+v, 3 }, crownLeaf, logState, random);
-            for (int i = 1; i <= offset;     i++) { BlockPos b = extTop.above(0).relative(dir1, i); if (isOpen(level, b)) level.setBlock(b, logState, 4); }
-            for (int i = 1; i <= offset - 2; i++) { BlockPos b = extTop.above(-2).relative(dir2, i); if (isOpen(level, b)) level.setBlock(b, logState, 4); }
+            for (int i = 1; i <= offset;     i++) { BlockPos b = extTop.above(0).relative(dir1, i); if (isOpen(level, b)) setGuarded(level, b, logState, 4); }
+            for (int i = 1; i <= offset - 2; i++) { BlockPos b = extTop.above(-2).relative(dir2, i); if (isOpen(level, b)) setGuarded(level, b, logState, 4); }
 
         } else if (isBirch) {
             // Crown wraps trunk top: starts 4 below extTop so no bare trunk visible.
@@ -472,7 +491,7 @@ public class LeafStairsProcessor {
                          new int[]{ 2, 4+v, 4+v, 3+v, 2 }, crownLeaf, logState, random);
             for (int i = 1; i <= offset; i++) {
                 BlockPos b = extTop.above(-2).relative(dir, i);
-                if (isOpen(level, b)) level.setBlock(b, logState, 4);
+                if (isOpen(level, b)) setGuarded(level, b, logState, 4);
             }
 
         } else {
@@ -488,8 +507,8 @@ public class LeafStairsProcessor {
                          new int[]{ 3+v, 5+v, 6+v, 5+v, 3+v, 2 }, crownLeaf, logState, random);
             placeLoggedCluster(level, extTop.above(-3).relative(dir2, offset - 2),
                          new int[]{ 3, 4+v, 5+v, 4+v, 3, 2 }, crownLeaf, logState, random);
-            for (int i = 1; i <= offset;     i++) { BlockPos b = extTop.above(-1).relative(dir1, i); if (isOpen(level, b)) level.setBlock(b, logState, 4); }
-            for (int i = 1; i <= offset - 2; i++) { BlockPos b = extTop.above(-3).relative(dir2, i); if (isOpen(level, b)) level.setBlock(b, logState, 4); }
+            for (int i = 1; i <= offset;     i++) { BlockPos b = extTop.above(-1).relative(dir1, i); if (isOpen(level, b)) setGuarded(level, b, logState, 4); }
+            for (int i = 1; i <= offset - 2; i++) { BlockPos b = extTop.above(-3).relative(dir2, i); if (isOpen(level, b)) setGuarded(level, b, logState, 4); }
         }
     }
 
@@ -537,7 +556,7 @@ public class LeafStairsProcessor {
                 if (d2 > r2) continue;
                 if (d2 > inner2 && random.nextFloat() < 0.35f) continue; // sparse edge
                 BlockPos p = centre.offset(dx, 0, dz);
-                if (isOpen(level, p)) level.setBlock(p, leaf, 4);
+                if (isOpen(level, p)) setGuarded(level, p, leaf, 4);
             }
         }
     }
@@ -570,9 +589,9 @@ public class LeafStairsProcessor {
         // Vertical log post through the full cluster height.
         for (int dy = 0; dy < radii.length; dy++) {
             BlockPos lp    = base.above(dy);
-            BlockState cur = level.getBlockState(lp);
+            BlockState cur = stateAt(level, lp);
             if (cur.isAir() || (cur.is(BlockTags.LEAVES) && !cur.getValue(LeavesBlock.PERSISTENT))) {
-                level.setBlock(lp, log, 4);
+                setGuarded(level, lp, log, 4);
             }
         }
         // Leaves: radius capped at 6 so no leaf is ever > 6 horizontal hops from the post.
@@ -589,8 +608,43 @@ public class LeafStairsProcessor {
             .orElse(null);
     }
 
+    /**
+     * Free for foliage. Positions outside the worldgen reach limit answer false rather than being
+     * read: every caller treats false as "leave it alone", so the limit turns into "do not touch
+     * another chunk's business" without any of them having to know about it.
+     */
+    /**
+     * Reads a block, or reports air for anything outside the worldgen reach limit.
+     *
+     * <p>Air is the answer that makes every caller do nothing: surveys stop counting it, stair
+     * detection stops converting it. Guarding here rather than at each of the call sites is what
+     * makes the budget total - the class simply cannot see past its own boundary, so no future
+     * radius or offset can wander over it.
+     */
+    private static BlockState stateAt(LevelAccessor level, BlockPos pos) {
+        if (!AncientTrees.reachable(pos)) return Blocks.AIR.defaultBlockState();
+
+        return level.getBlockState(pos);
+    }
+
     private static boolean isOpen(LevelAccessor level, BlockPos pos) {
+        if (!AncientTrees.reachable(pos)) return false;
+
         BlockState s = level.getBlockState(pos);
         return !s.is(BlockTags.LEAVES) && !s.is(BlockTags.LOGS);
+    }
+
+    /**
+     * The one place this class writes to the world, so the reach limit only has to be enforced once.
+     *
+     * <p>Amplified crowns are assembled from offsets and radii scattered across a dozen species
+     * branches - an acacia's secondary umbrella alone lands eleven out with a radius-eight cluster on
+     * it - and auditing every one of those sums by hand is the kind of arithmetic that is right until
+     * somebody adds a species. Funnelling the writes is what makes the bound hold regardless.
+     */
+    private static boolean setGuarded(LevelAccessor level, BlockPos pos, BlockState state, int flags) {
+        if (!AncientTrees.reachable(pos)) return false;
+
+        return level.setBlock(pos, state, flags);
     }
 }
