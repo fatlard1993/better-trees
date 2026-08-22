@@ -11,6 +11,7 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.ScheduledTickAccess;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.sounds.AmbientLeavesBlockSoundPlayer;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -24,6 +25,7 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
@@ -97,7 +99,39 @@ public class LeafStairsBlock extends LeavesBlock {
         return defaultBlockState();
     }
 
-    // ── Decay ────────────────────────────────────────────────────────────────
+    // ── Shape ────────────────────────────────────────────────────────────────
+
+    /**
+     * The same state, wearing a real stair, so vanilla can be asked for the shape.
+     *
+     * <p>Facing, half and shape are the very properties {@link BlockStateProperties} hands to
+     * {@code StairBlock}, so the two states agree by construction. Vanilla joins eight boxes over
+     * those three properties to build a stair's outline; a copy of that arithmetic here would be one
+     * quiet divergence away from the model it exists to match.
+     */
+    private static BlockState asStair(BlockState state) {
+        return Blocks.OAK_STAIRS.defaultBlockState()
+            .setValue(HORIZONTAL_FACING, state.getValue(HORIZONTAL_FACING))
+            .setValue(HALF,              state.getValue(HALF))
+            .setValue(STAIRS_SHAPE,      state.getValue(STAIRS_SHAPE));
+    }
+
+    /**
+     * Extending {@link LeavesBlock} means the stair properties reached the model but never the
+     * hitbox: a leaf stair drew as a step and stood as a full cube, so it could not be walked up
+     * the way its own shape invited.
+     */
+    @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos,
+                                  CollisionContext context) {
+        return asStair(state).getShape(level, pos, context);
+    }
+
+    @Override
+    protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos,
+                                           CollisionContext context) {
+        return asStair(state).getCollisionShape(level, pos, context);
+    }
 
     /**
      * Snow layers survive only on blocks with a sturdy top face, which MC derives
@@ -108,6 +142,8 @@ public class LeafStairsBlock extends LeavesBlock {
     protected VoxelShape getBlockSupportShape(BlockState state, BlockGetter level, BlockPos pos) {
         return state.getValue(HALF) == Half.TOP ? Shapes.block() : Shapes.empty();
     }
+
+    // ── Decay ────────────────────────────────────────────────────────────────
 
     /**
      * Distance-based decay is handled by scheduled ticks (see updateShape / tick).
