@@ -462,12 +462,22 @@ public class LeafStairsProcessor {
             // The cone begins directly above the MEGA_SPRUCE's original canopy top
             // and ascends through the full extension, so the trunk is always inside foliage.
             // Radius is capped at 6 so every leaf is within 6 hops of the trunk-log column.
+            //
+            // A disc no wider than the trunk it is centred on places nothing at all: isOpen
+            // refuses logs, and this trunk is radius 2. The taper used to fall to 2 and then
+            // 1 while there was still trunk under it, so the top six blocks got no leaves and
+            // the tree came out a bare pole wearing a one-block tuft. Below the trunk's top
+            // the disc is held wide enough to clear it; above it, where there is no trunk
+            // left to hide, it closes to a point.
             int baseR  = 6 + v;  // max 6 or 7, but cap below ensures ≤ 6
             int coneH  = extension + 3;
             int startY = -(extension - 1);
             for (int layer = 0; layer < coneH; layer++) {
-                int r = Math.min(6, Math.max(1, baseR - layer / 3));
-                placeDisc(level, extTop.above(startY + layer), r, crownLeaf, random);
+                int y = startY + layer;
+                int r = y <= 0
+                    ? Math.max(extRadius + 1, Math.min(6, baseR - layer / 3))
+                    : Math.max(1, extRadius + 1 - y);
+                placeDisc(level, extTop.above(y), r, crownLeaf, random);
             }
 
         } else if (isJungle) {
