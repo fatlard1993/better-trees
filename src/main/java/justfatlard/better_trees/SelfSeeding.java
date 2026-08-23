@@ -36,8 +36,13 @@ public final class SelfSeeding {
 	 *
 	 * <p>Long enough that a sapling knocked loose is still in the air, and that anything a player
 	 * dropped on purpose can be picked back up before the ground claims it.
+	 *
+	 * <p>A minute, where this used to be five seconds. Five was not long enough to be either of
+	 * those things: felling one tree scatters saplings that rooted while the player was still
+	 * walking over to collect them, and a stack set down for a moment was gone. A minute is well
+	 * short of vanilla's five-minute despawn, so a seed that takes has genuinely been left.
 	 */
-	public static final int SETTLE_TICKS = 100;
+	public static final int SETTLE_TICKS = 1200;
 
 	/** Vanilla's bonemeal puff, which is the growth this is standing in for. */
 	private static final int GROWTH_PARTICLES = 2005;
