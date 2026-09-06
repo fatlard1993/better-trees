@@ -5,9 +5,9 @@
   "mixins": [
     "ItemEntityMixin",
     "LeafDecayMixin",
+    "SeparatedLeavesMixin",
     "StructureTemplateMixin",
-    "TreeFeatureMixin",
-    "TreeGrowerMixin"
+    "TreeFeatureMixin"
   ],
   "injectors": {
     "defaultRequire": 1

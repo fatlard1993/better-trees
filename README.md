@@ -16,9 +16,32 @@ After any tree finishes generating — from a sapling, from worldgen, or drawn a
 
 **They are tinted to match their parent.** Biome-dependent foliage colour for most species, fixed tints for spruce and birch, untinted for cherry and pale oak. Poplars get stairs too, in all three of their colours.
 
+## Leaves Keep To Their Own Wood
+
+Vanilla asks only whether there is *a* log within six blocks. So a birch beam run through a wall
+holds a felled oak's crown up in the air, and clearing a tree farm leaves a shell of somebody
+else's leaves standing in it.
+
+Here a leaf only counts wood of its own species. Fell an oak and its leaves come down, whatever
+else is nearby; build with any log you like and nothing sticks to it. Leaves do not prop each
+other up across species either, so an oak canopy touching a birch one keeps its own edges.
+
+**Worked out from names, not from a table.** A mod shipping `walnut_log` and `walnut_leaves` is
+handled the day it is installed, with no datapack and no entry to add. The few that do not follow
+the rule - azalea, which grows on oak, and bamboo - are named individually.
+
+**Unknown means yes.** A block whose name says nothing gets vanilla's own answer. Support is only
+ever taken away when the neighbour is certainly a different tree, because being wrong in that
+direction deletes somebody's canopy and being wrong in the other leaves it exactly as it was.
+
+This mod's leaf stairs are covered for free: they are leaves, and their names carry their species
+the same way vanilla's do.
+
 ## Ancient Trees
 
-A small chance — roughly 1% from a sapling, 0.5% during worldgen — that a tree grows as its larger fancy or mega variant instead of the normal form, for the species that have one. Big enough to be worth walking to, rare enough that finding one is an event.
+A small chance — 0.5%, during worldgen only — that a tree generates as its larger fancy or mega variant instead of the normal form, for the species that have one. Big enough to be worth walking to, rare enough that finding one is an event.
+
+**Worldgen only, deliberately.** Saplings used to roll for it too, at about 1%, which quietly made an ancient a crop: plant enough and you get one, and the rarity that made it worth walking to was gone. They are something you come across now, not something you farm. The roll is gated on the tree being placed into a chunk that is still generating rather than into a world that already exists, because a sapling growing runs the very same feature — deleting the sapling path alone would have left the worldgen roll firing for saplings anyway.
 
 An ancient conifer's cone has to clear its own trunk, so the shape holds up rather than growing through itself.
 
@@ -32,38 +55,13 @@ It waits a minute first. Five seconds was the original number and it was not lon
 
 ## Pandorical
 
-Better Trees registers its leaf stairs through Pandorical — each one standing in for its vanilla leaf block — and applies the per-species tint through it as well. Pandorical is a hard dependency (`fabric.mod.json`) and must be present on **both** server and client; there is no vanilla-client fallback, because a client with no leaf stairs has nothing to draw.
+Better Trees registers its leaf stairs through Pandorical — each one standing in for its vanilla leaf block — and applies the per-species tint through it as well. Pandorical is required on **both** server and client; there is no vanilla-client fallback, because a client with no leaf stairs has nothing to draw.
 
 With [block-tip](https://github.com/fatlard1993/block-tip) installed, a leaf stair names itself as the leaf it is.
 
-## Source Map
+## Development
 
-| File | What is in it |
-|---|---|
-| `LeafStairsBlock.java` | The block: decay, snow, waterlogging, and being stood on |
-| `LeafStairsProcessor.java` | Finding a finished tree's edge leaves and swapping them |
-| `AncientTrees.java` | The roll for an oversized variant, and keeping its shape honest |
-| `SelfSeeding.java` | A dropped sapling's one chance to take root |
-| `mixin/TreeGrowerMixin.java` | Trees grown from a sapling |
-| `mixin/TreeFeatureMixin.java` | Trees placed by worldgen |
-| `mixin/StructureTemplateMixin.java` | Trees a structure draws |
-| `mixin/LeafDecayMixin.java` | Decaying on the scheduled tick |
-| `mixin/ItemEntityMixin.java` | The dropped sapling's timer |
-| `integration/LeafTipRegistration.java` | block-tip naming |
-
-## Building
-
-Better Trees builds against Pandorical's live source, not a published artifact: `settings.gradle` includes `../pandorical`. It also compiles against block-tip's jar for the optional tip integration, so build that first.
-
-```bash
-./gradlew build
-```
-
-The built jar will be in `build/libs/`.
-
-## Installation
-
-Install server-side alongside its declared dependencies (see `fabric.mod.json`); connecting clients need Pandorical. Version targets live in `gradle.properties` (Minecraft, loader, Fabric API) and `fabric.mod.json` (Java).
+Installing, building and the map of the source are in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## License
 

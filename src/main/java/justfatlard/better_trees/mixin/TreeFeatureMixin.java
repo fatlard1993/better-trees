@@ -36,25 +36,29 @@ public class TreeFeatureMixin {
         if (fenced) AncientTrees.limitReachTo(pos);
 
         try {
-            postProcess(level, chunkGenerator, random, pos);
+            postProcess(level, chunkGenerator, random, pos, fenced);
         } finally {
             if (fenced) AncientTrees.clearReachLimit();
         }
     }
 
+    /**
+     * @param worldgen true when this is a chunk being generated rather than a tree growing in a
+     *                 world that already exists - the same {@code WorldGenRegion} test the reach
+     *                 fence uses, and the thing that decides whether an ancient may appear at all
+     */
     private static void postProcess(WorldGenLevel level, ChunkGenerator chunkGenerator,
-            RandomSource random, BlockPos pos) {
-        boolean ancient = AncientTrees.consumeAncient(); // true for sapling-grown fancy variants
+            RandomSource random, BlockPos pos, boolean worldgen) {
+        boolean ancient = false;
 
-        if (ancient) {
-            // Sapling path: amplify BEFORE running edge-stair processing so the
-            // new trunk/crown leaves are included in the stair scan.
-            LeafStairsProcessor.amplifyAncientTree(
-                level, pos, random);
-
-        } else if (random.nextFloat() < AncientTrees.WORLDGEN_ANCIENT_CHANCE) {
-            // Worldgen path: swap the tree with its fancy variant and amplify inside
-            // placeAncientExtension, then run the larger edge-stair scan below.
+        // Worldgen only, and deliberately so. An ancient is meant to be a thing you come across,
+        // and one you can farm from a sapling is a crop with a longer wait - the rarity was the
+        // whole of what made it worth walking to. The roll has to be fenced here rather than by
+        // deleting the sapling path alone: a sapling growing runs this very feature, so an
+        // ungated roll would still turn one ancient every couple of hundred saplings.
+        if (worldgen && random.nextFloat() < AncientTrees.WORLDGEN_ANCIENT_CHANCE) {
+            // Swap the tree with its fancy variant and amplify inside placeAncientExtension,
+            // then run the larger edge-stair scan below.
             if (AncientTrees.enterAncientPlacement()) {
                 try {
                     ancient = LeafStairsProcessor.placeAncientExtension(

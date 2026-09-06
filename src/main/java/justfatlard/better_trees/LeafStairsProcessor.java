@@ -229,16 +229,32 @@ public class LeafStairsProcessor {
         BlockPos min = origin.offset(-8, 0, -8);
         BlockPos max = origin.offset( 8, 16, 8);
 
-        // Determine species from dominant log type.
+        // Determine species from dominant log type - and the leaf, which does not always follow it.
         Map<Block, Integer> logCounts = new HashMap<>();
+        Map<Block, Integer> leafCounts = new HashMap<>();
         for (BlockPos cursor : BlockPos.betweenClosed(min, max)) {
             BlockState s = stateAt(level, cursor);
-            if (s.is(BlockTags.LOGS)) logCounts.merge(s.getBlock(), 1, Integer::sum);
+            if (s.is(BlockTags.LOGS)) {
+                logCounts.merge(s.getBlock(), 1, Integer::sum);
+            } else if (s.is(BlockTags.LEAVES) && !s.getValue(LeavesBlock.PERSISTENT)) {
+                leafCounts.merge(s.getBlock(), 1, Integer::sum);
+            }
         }
         Block dominantLog = dominant(logCounts);
         if (dominantLog == null) return false;
 
         ResourceKey<Feature> fancyKey = AncientTrees.LOG_TO_FANCY.get(dominantLog);
+
+        // Azalea is poplar's problem wearing different leaves, and it had gone unnoticed because
+        // its log does not give it away: an azalea tree is built from OAK logs, so it matched the
+        // oak entry above and was rebuilt as a fancy oak - azalea leaves swapped for plain ones,
+        // every time one went ancient.
+        //
+        // That is worse than a colour change. Azalea leaves are the game's one surface sign of a
+        // lush cave underneath, so repainting them does not just lose a look, it erases the only
+        // clue that anything is down there. Sent to the in-place path instead, which reads the leaf
+        // off the tree standing in front of it and therefore keeps whatever it finds.
+        if (isAzalea(dominant(leafCounts))) fancyKey = null;
 
         // No bigger variant to swap in, so grow the ancient form out of the tree already standing.
         //
@@ -288,7 +304,12 @@ public class LeafStairsProcessor {
      * before edge-stair processing) and worldgen ancient trees (from
      * {@link #placeAncientExtension} after the fancy feature is placed).
      */
-    public static void amplifyAncientTree(WorldGenLevel level, BlockPos origin,
+    /** Azalea leaves, in either of their two forms; the flowering one is the same tree in bloom. */
+    private static boolean isAzalea(Block leaf) {
+        return leaf == Blocks.AZALEA_LEAVES || leaf == Blocks.FLOWERING_AZALEA_LEAVES;
+    }
+
+    private static void amplifyAncientTree(WorldGenLevel level, BlockPos origin,
                                           RandomSource random) {
         BlockPos surveyMin = origin.offset(-12, 0, -12);
         BlockPos surveyMax = origin.offset( 12, 36, 12);

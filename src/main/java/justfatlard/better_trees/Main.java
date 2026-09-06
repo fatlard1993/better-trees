@@ -77,6 +77,13 @@ public class Main implements ModInitializer {
         if (pandorical) {
             PandoricalApi.content().registerModAssets(MOD_ID);
             registerBlockTints();
+
+            // Trees here are built to be looked at from outside, and the inside of a crown is a
+            // few thousand faces nobody will ever stand in. Asking for the culling rather than
+            // leaving it to each player's config is the point of having the option be
+            // server-settable: somebody who installed this mod asked for the big canopies, not
+            // for the bill that comes with drawing their interiors.
+            PandoricalApi.render().cullLeaves(true);
         }
 
         System.out.println("[" + MOD_ID + "] Loaded better-trees");
