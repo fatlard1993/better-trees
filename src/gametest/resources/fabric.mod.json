@@ -1,0 +1,18 @@
+{
+	"schemaVersion": 1,
+	"id": "better-trees-gametest",
+	"version": "1.0.0",
+	"name": "Better Trees game tests",
+	"description": "The pictures for the readme and the mod page.",
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-client-gametest": [
+			"justfatlard.better_trees.gametest.Showcase"
+		]
+	},
+	"depends": {
+		"better-trees-justfatlard": "*",
+		"fabric-client-gametest-api-v1": "*"
+	}
+}
