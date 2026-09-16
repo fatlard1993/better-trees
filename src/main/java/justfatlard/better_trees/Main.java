@@ -21,6 +21,17 @@ public class Main implements ModInitializer {
 
     /** Vanilla leaf block → its corresponding LeafStairsBlock. Populated during onInitialize. */
     public static final Map<Block, LeafStairsBlock> LEAF_STAIRS_MAP = new LinkedHashMap<>();
+    /**
+     * Cap block → its stairs, for the huge mushrooms and fungi. A cap is solid and never decays,
+     * so a plain vanilla stair of it is the right block; only the edge rule is shared with leaves.
+     */
+    public static final Map<Block, net.minecraft.world.level.block.StairBlock> CAP_STAIRS_MAP = new LinkedHashMap<>();
+    private static final Object[][] CAP_TYPES = {
+        { Blocks.RED_MUSHROOM_BLOCK,   "red_mushroom_cap"   },
+        { Blocks.BROWN_MUSHROOM_BLOCK, "brown_mushroom_cap" },
+        { Blocks.NETHER_WART_BLOCK,    "nether_wart_cap"    },
+        { Blocks.WARPED_WART_BLOCK,    "warped_wart_cap"    },
+    };
 
     // Each entry: [vanilla leaves block, block ID suffix]
     private static final Object[][] LEAF_TYPES = {
@@ -37,6 +48,10 @@ public class Main implements ModInitializer {
         { Blocks.RED_POPLAR_LEAVES,    "red_poplar"    },
         { Blocks.ORANGE_POPLAR_LEAVES, "orange_poplar" },
         { Blocks.YELLOW_POPLAR_LEAVES, "yellow_poplar" },
+        // Azalea grows on oak logs but its leaves are its own, and they end in a box like any
+        // other without stairs of their own. Untinted, like cherry.
+        { Blocks.AZALEA_LEAVES,           "azalea"           },
+        { Blocks.FLOWERING_AZALEA_LEAVES, "flowering_azalea" },
     };
 
     @Override
@@ -74,6 +89,24 @@ public class Main implements ModInitializer {
             }
         }
 
+        for (Object[] type : CAP_TYPES) {
+            Block cap = (Block) type[0];
+            String blockId = type[1] + "_stairs";
+            String capId = BuiltInRegistries.BLOCK.getKey(cap).toString();
+            ResourceKey<Block> key = ResourceKey.create(
+                Registries.BLOCK, Identifier.fromNamespaceAndPath(MOD_ID, blockId));
+            net.minecraft.world.level.block.StairBlock stairs = new net.minecraft.world.level.block.StairBlock(
+                cap.defaultBlockState(),
+                BlockBehaviour.Properties.ofFullCopy(cap).setId(key).overrideLootTable(cap.getLootTable()));
+            CAP_STAIRS_MAP.put(cap, stairs);
+            Registry.register(BuiltInRegistries.BLOCK, Identifier.fromNamespaceAndPath(MOD_ID, blockId), stairs);
+            if (net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("block-tip")) {
+                justfatlard.better_trees.integration.LeafTipRegistration.register(blockId, capId);
+            }
+            if (pandorical) {
+                PandoricalApi.content().registerBlock(MOD_ID + ":" + blockId, new BlockRegistration().baseBlock(capId));
+            }
+        }
         if (pandorical) {
             PandoricalApi.content().registerModAssets(MOD_ID);
             registerBlockTints();

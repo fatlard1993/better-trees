@@ -3,6 +3,10 @@
 build/
 !gradle/wrapper/gradle-wrapper.jar
 
+# Runtime
+run/
+logs/
+
 # IDE
 .idea/
 .vscode/

@@ -12,9 +12,13 @@ Two smaller things ride along: some trees grow far larger than they should, and 
 
 After any tree finishes generating — from a sapling, from worldgen, or drawn as part of a structure — its outermost edge leaves are swapped for matching leaf stairs. Trees a structure places get the same treatment as ones that grow, so a village orchard does not stand out against the forest behind it.
 
-**They are leaves, not decoration.** They decay when disconnected from logs, on the scheduled tick the way vanilla leaves do rather than a minute later. They block snow according to their orientation, they cannot be waterlogged, and they are walked on like stairs rather than like a full block.
+Every leaf in the game has stairs, azalea and flowering azalea included. So do the caps of the
+huge mushrooms and the huge fungi: the rim of a red mushroom, the plate of a brown one, and the
+wart of a crimson or warped fungus step down at their edges the same way.
 
-**They are tinted to match their parent.** Biome-dependent foliage colour for most species, fixed tints for spruce and birch, untinted for cherry and pale oak. Poplars get stairs too, in all three of their colours.
+**They are leaves, not decoration.** They decay when disconnected from logs, on the scheduled tick rather than a minute later, and so do vanilla leaves here: a felled crown comes down one ring per tick from where the log was, core and shell together. They block snow according to their orientation, they cannot be waterlogged, and they are walked on like stairs rather than like a full block.
+
+**They are tinted to match their parent.** Biome-dependent foliage colour for most species, fixed tints for spruce and birch, untinted for cherry, pale oak and azalea. Poplars get stairs too, in all three of their colours.
 
 ## Leaves Keep To Their Own Wood
 
@@ -45,6 +49,10 @@ A small chance — 0.5%, during worldgen only — that a tree generates as its l
 
 An ancient conifer's cone has to clear its own trunk, so the shape holds up rather than growing through itself.
 
+**Every vanilla tree can be ancient**, each in its own shape: oak's spreading heads, acacia's umbrellas, cherry's cloud, birch's slim column, jungle's emergent crowns, mangrove's paired crowns, and poplar as the Lombardy column it is in life, several times taller than it is wide. Spruce rolls evens between vanilla's two big forms: the mega spruce, bushy to the ground, and the mega pine, a bare trunk with its crown at the top. Where vanilla has a bigger form the ancient grows from it; where it has none, from the tree already standing, which is also how a yellow poplar or an azalea keeps its own leaves.
+
+Huge mushrooms and huge fungi go ancient at the same odds: a red mushroom as a domed cap on a thick stem twice the height, a brown one as a plate the width of a house, a crimson or warped fungus as a stem a dozen blocks taller under a pagoda of wart lit through with shroomlight.
+
 ## Self-Seeding Saplings
 
 Saplings fall out of trees by the thousand and are picked up by nobody. Left alone they sit as items until they despawn, which is the one thing a seed does not do.
@@ -53,9 +61,11 @@ A dropped sapling lying on ground it could grow in gets **one chance** to take r
 
 It waits a minute first. Five seconds was the original number and it was not long enough to be either thing: saplings rooted under players walking over to collect them, and a stack set down for a moment was gone. A minute is well short of vanilla's five-minute despawn, so a seed that takes has genuinely been left.
 
+It is not only saplings: any dropped item that places a plant gets the same one chance, and the plant itself decides whether it could live where it lies.
+
 ## Pandorical
 
-Better Trees registers its leaf stairs through Pandorical — each one standing in for its vanilla leaf block — and applies the per-species tint through it as well. Pandorical is required on **both** server and client; there is no vanilla-client fallback, because a client with no leaf stairs has nothing to draw.
+Better Trees registers its leaf stairs through Pandorical — each one standing in for its vanilla leaf block — and applies the per-species tint through it as well. It also asks Pandorical clients to cull the inside of leaf canopies, since nobody stands in a crown to see those faces. Pandorical is required on **both** server and client; there is no vanilla-client fallback, because a client with no leaf stairs has nothing to draw.
 
 With [block-tip](https://github.com/fatlard1993/block-tip) installed, a leaf stair names itself as the leaf it is.
 

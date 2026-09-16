@@ -3,6 +3,9 @@
   "package": "justfatlard.better_trees.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
+    "HugeBrownMushroomFeatureMixin",
+    "HugeFungusFeatureMixin",
+    "HugeRedMushroomFeatureMixin",
     "ItemEntityMixin",
     "LeafDecayMixin",
     "SeparatedLeavesMixin",

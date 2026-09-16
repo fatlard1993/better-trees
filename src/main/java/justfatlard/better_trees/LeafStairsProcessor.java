@@ -1,5 +1,6 @@
 package justfatlard.better_trees;
 
+import net.minecraft.data.worldgen.features.TreeFeatures;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -90,11 +91,7 @@ public class LeafStairsProcessor {
         for (BlockPos cursor : BlockPos.betweenClosed(min, max)) {
             BlockState state = stateAt(level, cursor);
 
-            if (!state.is(BlockTags.LEAVES)) continue;
-            if (state.getValue(LeavesBlock.PERSISTENT)) continue;
-            if (state.getBlock() instanceof LeafStairsBlock) continue;
-
-            LeafStairsBlock stairsBlock = Main.LEAF_STAIRS_MAP.get(state.getBlock());
+            Block stairsBlock = stairsFor(state);
             if (stairsBlock == null) continue;
 
             int openCount = 0;
@@ -118,11 +115,7 @@ public class LeafStairsProcessor {
                     for (Direction dir : HORIZONTALS) {
                         if (!isOpen(level, cursor.relative(dir))) { capFacing = dir; break; }
                     }
-                    BlockState newState = stairsBlock.defaultBlockState()
-                        .setValue(LeafStairsBlock.HORIZONTAL_FACING, capFacing)
-                        .setValue(LeafStairsBlock.HALF,              Half.BOTTOM)
-                        .setValue(LeafStairsBlock.STAIRS_SHAPE,      StairsShape.STRAIGHT)
-                        .setValue(LeavesBlock.DISTANCE,              state.getValue(LeavesBlock.DISTANCE));
+                    BlockState newState = stairState(stairsBlock, state, capFacing, Half.BOTTOM, StairsShape.STRAIGHT);
                     conversions.add(new Conversion(cursor.immutable(), newState));
                 }
                 continue;
@@ -144,16 +137,44 @@ public class LeafStairsProcessor {
             boolean openBelow = isOpen(level, cursor.below());
             Half half = (!openAbove && openBelow) ? Half.TOP : Half.BOTTOM;
 
-            BlockState newState = stairsBlock.defaultBlockState()
-                .setValue(LeafStairsBlock.HORIZONTAL_FACING, facing)
-                .setValue(LeafStairsBlock.HALF,              half)
-                .setValue(LeafStairsBlock.STAIRS_SHAPE,      shape)
-                .setValue(LeavesBlock.DISTANCE,              state.getValue(LeavesBlock.DISTANCE));
+            BlockState newState = stairState(stairsBlock, state, facing, half, shape);
 
             conversions.add(new Conversion(cursor.immutable(), newState));
         }
 
         return conversions;
+    }
+
+    /**
+     * The stairs this block's edge becomes, or null: a leaf that is not persistent and not a
+     * stair already, or a huge mushroom's or fungus's cap. Anything else keeps its corners.
+     */
+    private static Block stairsFor(BlockState state) {
+        if (state.is(BlockTags.LEAVES)) {
+            if (state.getValue(LeavesBlock.PERSISTENT)) return null;
+            if (state.getBlock() instanceof LeafStairsBlock) return null;
+            return Main.LEAF_STAIRS_MAP.get(state.getBlock());
+        }
+        return Main.CAP_STAIRS_MAP.get(state.getBlock());
+    }
+
+    /** A cap, a cap's stairs, or a mushroom stem: the parts of a huge mushroom that are not leaves or logs. */
+    private static boolean isCapOrStem(BlockState state) {
+        Block block = state.getBlock();
+        return Main.CAP_STAIRS_MAP.containsKey(block) || Main.CAP_STAIRS_MAP.containsValue(block)
+            || block == Blocks.MUSHROOM_STEM;
+    }
+
+    /** The stair state in place of {@code from}: a leaf stair keeps the leaf's distance, a cap stair has none. */
+    private static BlockState stairState(Block stairs, BlockState from, Direction facing, Half half, StairsShape shape) {
+        BlockState state = stairs.defaultBlockState()
+            .setValue(LeafStairsBlock.HORIZONTAL_FACING, facing)
+            .setValue(LeafStairsBlock.HALF,              half)
+            .setValue(LeafStairsBlock.STAIRS_SHAPE,      shape);
+        if (from.hasProperty(LeavesBlock.DISTANCE) && state.hasProperty(LeavesBlock.DISTANCE)) {
+            state = state.setValue(LeavesBlock.DISTANCE, from.getValue(LeavesBlock.DISTANCE));
+        }
+        return state;
     }
 
     // ── Inner top-layer conversion ───────────────────────────────────────────
@@ -186,25 +207,18 @@ public class LeafStairsProcessor {
             if (!occupied.add(innerPos)) continue; // already claimed
 
             BlockState inner = stateAt(level, innerPos);
-            if (!inner.is(BlockTags.LEAVES))             continue;
-            if (inner.getValue(LeavesBlock.PERSISTENT))  continue;
-            if (inner.getBlock() instanceof LeafStairsBlock) continue;
+            if (stairsFor(inner) == null) continue;
 
             // Must be on the canopy top: air above, solid below.
             if (!isOpen(level, innerPos.above())) continue;
             if ( isOpen(level, innerPos.below())) continue;
 
-            LeafStairsBlock stairsBlock = Main.LEAF_STAIRS_MAP.get(inner.getBlock());
-            if (stairsBlock == null) continue;
+            Block stairsBlock = stairsFor(inner);
 
             // Same facing as the outer stair, but half=TOP: solid top surface
             // (smooth from above), bevel at the bottom-exterior edge (visible
             // from the side, continuing the stepped canopy-top profile).
-            BlockState newState = stairsBlock.defaultBlockState()
-                .setValue(LeafStairsBlock.HORIZONTAL_FACING, facing)
-                .setValue(LeafStairsBlock.HALF,              Half.TOP)
-                .setValue(LeafStairsBlock.STAIRS_SHAPE,      StairsShape.STRAIGHT)
-                .setValue(LeavesBlock.DISTANCE,              inner.getValue(LeavesBlock.DISTANCE));
+            BlockState newState = stairState(stairsBlock, inner, facing, Half.TOP, StairsShape.STRAIGHT);
 
             result.add(new Conversion(innerPos.immutable(), newState));
         }
@@ -255,6 +269,10 @@ public class LeafStairsProcessor {
         // clue that anything is down there. Sent to the in-place path instead, which reads the leaf
         // off the tree standing in front of it and therefore keeps whatever it finds.
         if (isAzalea(dominant(leafCounts))) fancyKey = null;
+        // Vanilla has two big spruces: the mega spruce, bushy to the ground, and the mega pine,
+        // a bare trunk with its crown at the top. An ancient is one or the other, evens.
+        boolean pine = dominantLog == Blocks.SPRUCE_LOG && random.nextBoolean();
+        if (pine) fancyKey = TreeFeatures.MEGA_PINE;
 
         // No bigger variant to swap in, so grow the ancient form out of the tree already standing.
         //
@@ -264,7 +282,7 @@ public class LeafStairsProcessor {
         // poplar stays yellow. Bailing out here, which is what used to happen, meant poplar could
         // never be ancient at all.
         if (fancyKey == null) {
-            amplifyAncientTree(level, origin, random);
+            amplifyAncientTree(level, origin, random, false);
             return true;
         }
 
@@ -288,7 +306,7 @@ public class LeafStairsProcessor {
         }
 
         // Fancy feature placed; now amplify it into a massive ancient form.
-        amplifyAncientTree(level, origin, random);
+        amplifyAncientTree(level, origin, random, pine);
         return true;
     }
 
@@ -310,7 +328,7 @@ public class LeafStairsProcessor {
     }
 
     private static void amplifyAncientTree(WorldGenLevel level, BlockPos origin,
-                                          RandomSource random) {
+                                          RandomSource random, boolean pine) {
         BlockPos surveyMin = origin.offset(-12, 0, -12);
         BlockPos surveyMax = origin.offset( 12, 36, 12);
 
@@ -342,6 +360,9 @@ public class LeafStairsProcessor {
         boolean isCherry   = logType == Blocks.CHERRY_LOG;
         boolean isPaleOak  = logType == Blocks.PALE_OAK_LOG;
         boolean isMangrove = logType == Blocks.MANGROVE_LOG;
+        boolean isPoplar   = logType == Blocks.POPLAR_LOG;
+        // A pine is a conifer whose crown sits at the top of a bare trunk; the cone is the spruce's.
+        boolean isPine     = isConifer && pine;
         // Oak and azalea (oak logs) fall through to the oak branch.
 
         BlockState logState = logType.defaultBlockState();
@@ -368,7 +389,9 @@ public class LeafStairsProcessor {
 
         // ── Trunk extension ──────────────────────────────────────────────────
         int extension = isJungle  ? 20
+                      : isPine    ? 10   // a pine's height is bare trunk; the clump is short
                       : isConifer ? 18
+                      : isPoplar  ? 16   // a column, and a column is mostly height
                       : isBirch   ? 6    // SUPER_BIRCH is already very tall; short ext avoids bare trunk
                       : isAcacia  ? 8   // acacia is short and wide, not tall
                       : isDarkOak ? 14
@@ -401,7 +424,25 @@ public class LeafStairsProcessor {
 
         // ── Species-appropriate crown placement ──────────────────────────────
 
-        if (isAcacia) {
+        if (isPoplar) {
+            // A Lombardy poplar is a column: a crown that hugs the trunk the whole way up and
+            // narrows only at the very top, several times taller than it is wide. It wraps the
+            // extension from its foot, so no bare trunk shows between the old crown and the new.
+            int n = extension + 3;
+            int[] column = new int[n];
+            for (int i = 0; i < n; i++) {
+                int fromTop = n - 1 - i;
+                column[i] = i < 2 ? 2 : fromTop < 3 ? fromTop + 1 : 3 + v;
+            }
+            placeLoggedCluster(level, extTop.above(-(extension - 1)), column, crownLeaf, logState, random);
+
+        } else if (isPine) {
+            // A rounded clump on top of the bare trunk, wrapping its tip: the mega pine's own
+            // shape, grown. The old crown stays where it was, a lower whorl.
+            placeLoggedCluster(level, extTop.above(-3),
+                         new int[]{ 3+v, 5+v, 6, 6, 5+v, 4, 2 }, crownLeaf, logState, random);
+
+        } else if (isAcacia) {
             // Acacia is defined by its flat-topped umbrella silhouette, not a dome.
             // Profile builds wide and STAYS wide at the top (the "table" surface),
             // rather than narrowing off; bottom to top: narrow → wide → plateau.
@@ -561,10 +602,17 @@ public class LeafStairsProcessor {
             if (!isOpen(level, extPos)) continue;
             if (!occupied.add(extPos)) continue;
 
-            int dist = c.state().getValue(LeavesBlock.DISTANCE);
-            if (dist >= 6) continue;
+            // A leaf's distance carries out one further, and a leaf already at the edge of what
+            // its log holds has no halo to give. A mushroom's or fungus's cap stairs are not
+            // leaves and have no distance: nothing decays, so the halo is simply one more ring.
+            BlockState extended = c.state();
+            if (extended.hasProperty(LeavesBlock.DISTANCE)) {
+                int dist = extended.getValue(LeavesBlock.DISTANCE);
+                if (dist >= 6) continue;
+                extended = extended.setValue(LeavesBlock.DISTANCE, dist + 1);
+            }
 
-            extensions.add(new Conversion(extPos, c.state().setValue(LeavesBlock.DISTANCE, dist + 1)));
+            extensions.add(new Conversion(extPos, extended));
         }
 
         return extensions;
@@ -662,7 +710,7 @@ public class LeafStairsProcessor {
         if (!AncientTrees.reachable(pos)) return false;
 
         BlockState s = level.getBlockState(pos);
-        return !s.is(BlockTags.LEAVES) && !s.is(BlockTags.LOGS);
+        return !s.is(BlockTags.LEAVES) && !s.is(BlockTags.LOGS) && !isCapOrStem(s);
     }
 
     /**
