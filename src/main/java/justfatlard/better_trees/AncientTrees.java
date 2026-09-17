@@ -1,12 +1,19 @@
 package justfatlard.better_trees;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.data.worldgen.features.TreeFeatures;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.server.level.ServerChunkCache;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class AncientTrees {
@@ -83,6 +90,53 @@ public class AncientTrees {
         BoundingBox region = ALLOWED_REGION.get();
 
         return region == null || region.isInside(pos);
+    }
+
+    // ── What was written, for the clients that were not told ─────────────────
+
+    /**
+     * Where the amplifier has written during this placement, when anybody is collecting.
+     *
+     * <p>Worldgen writes through a {@code WorldGenRegion}, which puts blocks into whichever chunk
+     * owns them and tells nobody: it has no players to tell. That is right for the chunk being
+     * generated, which nobody has seen yet, and wrong for its neighbours, which may have been sent
+     * to somebody standing there - an ancient reaches sixteen blocks out and sixty up, so it spills
+     * into them routinely. Those blocks are in the world and absent from the screen until the chunk
+     * reloads, which is the hole fatlard saw on the server.
+     *
+     * <p>So the positions are kept, and {@link #tellClients} hands them to the server thread to
+     * re-broadcast once the placement is done. A chunk nobody is tracking ignores the lot.
+     */
+    private static final ThreadLocal<List<BlockPos>> WRITTEN = new ThreadLocal<>();
+
+    /** Start keeping a note of what gets written, for a placement that is about to happen. */
+    public static void collectWrites() {
+        WRITTEN.set(new ArrayList<>());
+    }
+
+    /** Note one write; does nothing unless somebody is collecting. */
+    public static void wrote(BlockPos pos) {
+        List<BlockPos> written = WRITTEN.get();
+        if (written != null) written.add(pos.immutable());
+    }
+
+    /**
+     * Tell the clients about everything written since {@link #collectWrites}, and stop collecting.
+     *
+     * <p>Scheduled onto the server thread rather than done here: worldgen runs on a worker, and the
+     * chunk map is the server thread's.
+     */
+    public static void tellClients(LevelAccessor level) {
+        List<BlockPos> written = WRITTEN.get();
+        WRITTEN.remove();
+        if (written == null || written.isEmpty()) return;
+        if (!(level instanceof ServerLevelAccessor access)) return;
+
+        ServerLevel server = access.getLevel();
+        server.getServer().execute(() -> {
+            ServerChunkCache chunks = server.getChunkSource();
+            for (BlockPos pos : written) chunks.blockChanged(pos);
+        });
     }
 
     // ── Runtime flags ────────────────────────────────────────────────────────

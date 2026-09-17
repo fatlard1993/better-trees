@@ -60,14 +60,6 @@ public final class Showcase implements FabricClientGameTest {
 			});
 			context.waitTicks(80);
 
-			// A walk away and back, so the chunks unload and are sent again. An ancient reaches
-			// sixty blocks up through chunks the client already has, and the section updates for
-			// the top of it do not all arrive: without this the crown floats free of its trunk.
-			server.runCommand("tp @a %d %d %d".formatted(x + 600, y + 30, z));
-			context.waitTicks(100);
-			server.runCommand("tp @a %d %d %d".formatted(x, y + 10, z));
-			context.waitTicks(120);
-
 			look(server, x + 26.0, y + 12.0, z + 2.0, ancient.getX(), y + 14.0, ancient.getZ());
 			context.waitTicks(60);
 			shoot(context, "ancient");

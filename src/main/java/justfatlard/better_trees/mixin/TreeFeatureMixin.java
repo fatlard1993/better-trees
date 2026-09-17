@@ -34,11 +34,14 @@ public class TreeFeatureMixin {
         // on the concrete type.
         boolean fenced = level instanceof WorldGenRegion;
         if (fenced) AncientTrees.limitReachTo(pos);
+        // Worldgen tells no client anything, so what it writes is kept and broadcast afterwards.
+        AncientTrees.collectWrites();
 
         try {
             postProcess(level, chunkGenerator, random, pos, fenced);
         } finally {
             if (fenced) AncientTrees.clearReachLimit();
+            AncientTrees.tellClients(level);
         }
     }
 

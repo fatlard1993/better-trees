@@ -724,6 +724,14 @@ public class LeafStairsProcessor {
     private static boolean setGuarded(LevelAccessor level, BlockPos pos, BlockState state, int flags) {
         if (!AncientTrees.reachable(pos)) return false;
 
-        return level.setBlock(pos, state, flags);
+        // Every write here asks for the clients to be told, even the ones whose callers pass
+        // UPDATE_INVISIBLE. A chunk that has not been sent to anybody yet ignores the bit, so
+        // worldgen pays nothing for it; a chunk that has been sent is only told when it is asked,
+        // and the amplifier used to ask for nothing. That is a tree with holes in it, or a crown
+        // hanging in the air, for as long as the chunk stays loaded: 110 blocks of a 746 block
+        // ancient oak, measured, until something made the chunk reload.
+        AncientTrees.wrote(pos);
+
+        return level.setBlock(pos, state, flags | Block.UPDATE_CLIENTS);
     }
 }
