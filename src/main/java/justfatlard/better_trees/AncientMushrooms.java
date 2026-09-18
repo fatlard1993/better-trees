@@ -1,6 +1,10 @@
 package justfatlard.better_trees;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.WorldGenLevel;
@@ -30,10 +34,54 @@ public final class AncientMushrooms {
 		try {
 			boolean ancient = worldgen && random.nextFloat() < AncientTrees.WORLDGEN_ANCIENT_CHANCE;
 			if (ancient) amplify(level, random, origin, stem, cap, glow);
+			closeCorners(level, origin, cap, ancient ? 16 : 8, ancient ? 65 : 16);
 			LeafStairsProcessor.process(level, origin, random, ancient);
 		} finally {
 			if (worldgen) AncientTrees.clearReachLimit();
 		}
+	}
+
+	/**
+	 * Fill the pinch where a cap turns a corner diagonally.
+	 *
+	 * <p>A huge mushroom's hanging skirt is a ring with its corners cut, which is the game's own
+	 * shape and has always had a slot at each corner where two arms of the ring meet at a point.
+	 * Nothing here made those; what this mod did was smooth everything around them, and a gap that
+	 * read as blockiness among blocky things reads as a hole once its neighbours are bevelled. You
+	 * can see the stem through the corner of a red one.
+	 *
+	 * <p>A cell is a pinch when it is empty, two of its four sides are cap, those two are at right
+	 * angles, and the cell catty-corner between them is empty too. The last clause is the whole
+	 * difference between a slot and a step: every rasterised circle turns in stairs, and each of
+	 * those steps also has two cap sides meeting at a right angle - but with the circle's own
+	 * filling behind it, so there is nothing to see through. Without that clause this squared off
+	 * the outline of every ancient cap, which is the exact opposite of the job.
+	 *
+	 * <p>Filling it closes the slot and leaves the silhouette otherwise as the game drew it. Run
+	 * before the stairs, so the corner gets bevelled along with everything else rather than
+	 * standing square among them.
+	 */
+	private static void closeCorners(WorldGenLevel level, BlockPos origin, BlockState cap,
+			int reach, int height) {
+		List<BlockPos> pinches = new ArrayList<>();
+		for (BlockPos pos : BlockPos.betweenClosed(
+				origin.offset(-reach, 0, -reach), origin.offset(reach, height, reach))) {
+			if (!level.getBlockState(pos).isAir()) continue;
+
+			boolean north = level.getBlockState(pos.north()).is(cap.getBlock());
+			boolean south = level.getBlockState(pos.south()).is(cap.getBlock());
+			boolean east = level.getBlockState(pos.east()).is(cap.getBlock());
+			boolean west = level.getBlockState(pos.west()).is(cap.getBlock());
+			if (!(north || south) || !(east || west) || north == south || east == west) continue;
+
+			BlockPos across = (north ? pos.north() : pos.south()).relative(east ? Direction.EAST : Direction.WEST);
+			if (level.getBlockState(across).is(cap.getBlock())) continue;
+
+			pinches.add(pos.immutable());
+		}
+		// Collected first: filling as it goes would let one corner make another out of the block it
+		// just placed, and a mushroom would grow square corners outward a ring at a time.
+		for (BlockPos pos : pinches) put(level, pos, cap, cap);
 	}
 
 	private static void amplify(WorldGenLevel level, RandomSource random, BlockPos origin,
@@ -87,12 +135,28 @@ public final class AncientMushrooms {
 		}
 	}
 
+	/**
+	 * How wide the hanging rim is drawn, as a radius.
+	 *
+	 * <p>Not one. A band one wide between two rasterised circles is not a ring at all: where the
+	 * outline runs at forty-five degrees the two circles land on the same cells and the band
+	 * pinches out, so an r=6 rim came out as arcs joined at the corners, with a clean hole at the
+	 * top of each one. Every block in it hangs below the widest disc with nothing beside it, which
+	 * is exactly where a hole is easiest to see and hardest to explain.
+	 *
+	 * <p>One and a half closes it: the band never pinches below one cell, the ring is orthogonally
+	 * connected the whole way round, and a rim that reads as a thick lip is what a mushroom has
+	 * anyway.
+	 */
+	private static final double RIM_WIDTH = 1.5;
+
 	/** The outline of a circle at a height: a cap's hanging rim. */
 	private static void ring(WorldGenLevel level, BlockPos centre, int r, BlockState cap) {
+		double inner = (r - RIM_WIDTH) * (r - RIM_WIDTH);
 		for (int dx = -r; dx <= r; dx++) {
 			for (int dz = -r; dz <= r; dz++) {
 				int d2 = dx * dx + dz * dz;
-				if (d2 > r * r || d2 <= (r - 1) * (r - 1)) continue;
+				if (d2 > r * r || d2 <= inner) continue;
 				put(level, centre.offset(dx, 0, dz), cap, cap);
 			}
 		}
