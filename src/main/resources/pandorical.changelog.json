@@ -4,18 +4,27 @@
 	],
 	"versions": {
 		"1.2.0": [
-			"A huge mushroom's cap no longer has a hole at each corner where its skirt turns, and an ancient one's rim is a closed ring rather than four arcs with gaps between them."
+			"A huge mushroom's cap no longer has a hole at each corner where its skirt turns.",
+			"An ancient one's rim is a closed ring rather than four arcs."
 		],
 		"1.1.1": [
-			"An ancient grown beside you is one you can see. The blocks were always there, but a good part of them were never sent to your client until something made the chunk reload."
+			"An ancient grown beside you is one you can see.",
+			"The blocks were there; a good part were never sent to your client until the chunk reloaded."
 		],
 		"1.1.0": [
-			"Huge mushrooms and the nether fungi can go ancient too, at the same odds as a tree: a red one domed on a tall stem, a brown one spreading a plate the width of a house, a fungus under a pagoda of wart and shroomlight. Their caps are finished with stairs the way a canopy is.",
-			"Azalea leaves get stairs as well, and leaves are finished with their own kind rather than a neighbour's."
+			"Huge mushrooms and the nether fungi can go ancient too, at the same odds as a tree.",
+			"A red one domed on a tall stem, a brown one spreading a plate the width of a house.",
+			"A fungus under a pagoda of wart and shroomlight.",
+			"Their caps are finished with stairs the way a canopy is.",
+			"Azalea leaves get stairs as well.",
+			"Leaves are finished with their own kind rather than a neighbour's."
 		],
 		"1.0.0": [
-			"The outermost leaves of every tree, grown from a sapling, laid by worldgen or drawn as part of a structure, are swapped for stair-shaped leaves, so a canopy rounds off instead of stopping dead at a cube.",
-			"Leaf stairs decay like leaves and are walked on like stairs, and a sapling nobody picks up takes root where it lands."
+			"The outermost leaves of every tree are swapped for stair-shaped leaves.",
+			"A canopy rounds off instead of stopping dead at a cube.",
+			"Grown from a sapling, laid by worldgen or drawn as part of a structure alike.",
+			"Leaf stairs decay like leaves and are walked on like stairs.",
+			"A sapling nobody picks up takes root where it lands."
 		]
 	}
 }
