@@ -18,9 +18,7 @@ Two smaller things ride along: some trees grow far larger than they should, and 
 
 After any tree finishes generating — from a sapling, from worldgen, or drawn as part of a structure — its outermost edge leaves are swapped for matching leaf stairs. Trees a structure places get the same treatment as ones that grow, so a village orchard does not stand out against the forest behind it.
 
-Every leaf in the game has stairs, azalea and flowering azalea included. So do the caps of the
-huge mushrooms and the huge fungi: the rim of a red mushroom, the plate of a brown one, and the
-wart of a crimson or warped fungus step down at their edges the same way.
+Every leaf in the game has stairs, azalea and flowering azalea included. So do the caps of the huge mushrooms and the huge fungi: the rim of a red mushroom, the plate of a brown one, and the wart of a crimson or warped fungus step down at their edges the same way.
 
 **They are leaves, not decoration.** They decay when disconnected from logs, on the scheduled tick rather than a minute later, and so do vanilla leaves here: a felled crown comes down one ring per tick from where the log was, core and shell together. They block snow according to their orientation, they cannot be waterlogged, and they are walked on like stairs rather than like a full block.
 
@@ -28,24 +26,15 @@ wart of a crimson or warped fungus step down at their edges the same way.
 
 ## Leaves Keep To Their Own Wood
 
-Vanilla asks only whether there is *a* log within six blocks. So a birch beam run through a wall
-holds a felled oak's crown up in the air, and clearing a tree farm leaves a shell of somebody
-else's leaves standing in it.
+Vanilla asks only whether there is *a* log within six blocks. So a birch beam run through a wall holds a felled oak's crown up in the air, and clearing a tree farm leaves a shell of somebody else's leaves standing in it.
 
-Here a leaf only counts wood of its own species. Fell an oak and its leaves come down, whatever
-else is nearby; build with any log you like and nothing sticks to it. Leaves do not prop each
-other up across species either, so an oak canopy touching a birch one keeps its own edges.
+Here a leaf only counts wood of its own species. Fell an oak and its leaves come down, whatever else is nearby; build with any log you like and nothing sticks to it. Leaves do not prop each other up across species either, so an oak canopy touching a birch one keeps its own edges.
 
-**Worked out from names, not from a table.** A mod shipping `walnut_log` and `walnut_leaves` is
-handled the day it is installed, with no datapack and no entry to add. The few that do not follow
-the rule - azalea, which grows on oak, and bamboo - are named individually.
+**Worked out from names, not from a table.** A mod shipping `walnut_log` and `walnut_leaves` is handled the day it is installed, with no datapack and no entry to add. The few that do not follow the rule - azalea, which grows on oak, and bamboo - are named individually.
 
-**Unknown means yes.** A block whose name says nothing gets vanilla's own answer. Support is only
-ever taken away when the neighbour is certainly a different tree, because being wrong in that
-direction deletes somebody's canopy and being wrong in the other leaves it exactly as it was.
+**Unknown means yes.** A block whose name says nothing gets vanilla's own answer. Support is only ever taken away when the neighbour is certainly a different tree, because being wrong in that direction deletes somebody's canopy and being wrong in the other leaves it exactly as it was.
 
-This mod's leaf stairs are covered for free: they are leaves, and their names carry their species
-the same way vanilla's do.
+This mod's leaf stairs are covered for free: they are leaves, and their names carry their species the same way vanilla's do.
 
 ## Ancient Trees
 
