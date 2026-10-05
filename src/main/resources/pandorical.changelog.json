@@ -3,6 +3,10 @@
 		"Canopies that taper off instead of ending in a flat green cube, trees that now and then grow far larger than they should, and saplings that plant themselves."
 	],
 	"versions": {
+		"1.2.1": [
+			"An ancient tree or mushroom wears one crown, at the top: the one it grew from no longer hangs round its trunk as a ring.",
+			"Growing one no longer takes a bite out of the trees beside it."
+		],
 		"1.2.0": [
 			"A huge mushroom's cap no longer has a hole at each corner where its skirt turns.",
 			"An ancient one's rim is a closed ring rather than four arcs."

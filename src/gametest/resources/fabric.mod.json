@@ -9,6 +9,7 @@
 	"entrypoints": {
 		"fabric-client-gametest": [
 			"justfatlard.better_trees.gametest.AncientReachesTheClient",
+			"justfatlard.better_trees.gametest.AncientsLoseTheirOldCrowns",
 			"justfatlard.better_trees.gametest.Showcase"
 		]
 	},

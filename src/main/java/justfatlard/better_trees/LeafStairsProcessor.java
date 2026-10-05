@@ -18,9 +18,11 @@ import net.minecraft.world.level.block.state.properties.Half;
 import net.minecraft.world.level.block.state.properties.StairsShape;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.feature.Feature;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -291,14 +293,14 @@ public class LeafStairsProcessor {
             .get(fancyKey);
         if (feature.isEmpty()) return false;
 
-        // Save existing tree for restoration on failure.
+        // Save existing tree for restoration on failure. This tree only: a forest stands close, and
+        // the box this used to clear took a bite out of every neighbour that reached into it.
         Map<BlockPos, BlockState> saved = new HashMap<>();
-        for (BlockPos cursor : BlockPos.betweenClosed(min, max)) {
-            BlockState s = stateAt(level, cursor);
-            if (s.is(BlockTags.LOGS) || (s.is(BlockTags.LEAVES) && !s.getValue(LeavesBlock.PERSISTENT)))
-                saved.put(cursor.immutable(), s);
-        }
+        OwnTree own = ownTree(level, origin, min, max);
+        for (BlockPos pos : own.logs()) saved.put(pos, stateAt(level, pos));
+        for (BlockPos pos : own.leaves()) saved.put(pos, stateAt(level, pos));
         for (BlockPos pos : saved.keySet()) setGuarded(level, pos, Blocks.AIR.defaultBlockState(), 4);
+        dropUnsupported(level, saved.keySet());
 
         if (!feature.get().value().place(level, chunkGenerator, random, origin)) {
             for (Map.Entry<BlockPos, BlockState> e : saved.entrySet()) setGuarded(level, e.getKey(), e.getValue(), 4);
@@ -366,6 +368,18 @@ public class LeafStairsProcessor {
         // Oak and azalea (oak logs) fall through to the oak branch.
 
         BlockState logState = logType.defaultBlockState();
+
+        // ── The crown it had comes off first ────────────────────────────────
+        // The new crown goes at the top of a trunk eight to twenty blocks taller, so the one the
+        // tree grew with would be left hanging round the trunk's foot, a ring of leaves at the
+        // bottom of a tree that has its crown somewhere else. Its leaf has been read above, so the
+        // ancient still wears it. Spruce and poplar keep theirs: each builds its new foliage on
+        // from the old, a cone or a column, and taking the old off would leave a bare stretch.
+        if (!isPoplar && !(isConifer && !isPine)) {
+            Set<BlockPos> crown = ownTree(level, origin, surveyMin, surveyMax).leaves();
+            for (BlockPos pos : crown) setGuarded(level, pos, Blocks.AIR.defaultBlockState(), 4);
+            dropUnsupported(level, crown);
+        }
 
         // ── Trunk thickening ────────────────────────────────────────────────
         // Lower 2/3 of original tree height → radius-2 circle (~5 wide).
@@ -438,7 +452,7 @@ public class LeafStairsProcessor {
 
         } else if (isPine) {
             // A rounded clump on top of the bare trunk, wrapping its tip: the mega pine's own
-            // shape, grown. The old crown stays where it was, a lower whorl.
+            // shape, grown. The crown the pine had is gone by now, so the trunk below this is bare, as a pine's is.
             placeLoggedCluster(level, extTop.above(-3),
                          new int[]{ 3+v, 5+v, 6, 6, 5+v, 4, 2 }, crownLeaf, logState, random);
 
@@ -700,6 +714,89 @@ public class LeafStairsProcessor {
      * makes the budget total - the class simply cannot see past its own boundary, so no future
      * radius or offset can wander over it.
      */
+    /** A tree's own logs and leaves, as distinct from a neighbour's reaching into the same box. */
+    record OwnTree(Set<BlockPos> logs, Set<BlockPos> leaves) {}
+
+    /**
+     * The tree standing at {@code origin}: the logs joined to its trunk, and the leaves those logs
+     * hold up. A leaf is this tree's unless its own distance, the game's account of how far it is
+     * from the log that keeps it alive, is shorter than the walk out from this tree's logs: then a
+     * nearer log, a neighbour's, holds it, and it is left alone. A distance longer than the walk is
+     * this tree's leaf with a number not yet brought up to date, as one just turned to a stair is.
+     */
+    static OwnTree ownTree(LevelAccessor level, BlockPos origin, BlockPos min, BlockPos max) {
+        BoundingBox box = BoundingBox.fromCorners(min, max);
+        Set<BlockPos> logs = new HashSet<>();
+        ArrayDeque<BlockPos> queue = new ArrayDeque<>();
+        if (stateAt(level, origin).is(BlockTags.LOGS)) {
+            logs.add(origin.immutable());
+            queue.add(origin.immutable());
+        }
+        while (!queue.isEmpty()) {
+            BlockPos at = queue.poll();
+            for (BlockPos next : BlockPos.betweenClosed(at.offset(-1, -1, -1), at.offset(1, 1, 1))) {
+                if (!box.isInside(next) || logs.contains(next)) continue;
+                if (!stateAt(level, next).is(BlockTags.LOGS)) continue;
+                BlockPos kept = next.immutable();
+                logs.add(kept);
+                queue.add(kept);
+            }
+        }
+
+        Set<BlockPos> leaves = new HashSet<>();
+        ArrayDeque<BlockPos> frontier = new ArrayDeque<>(logs);
+        Map<BlockPos, Integer> steps = new HashMap<>();
+        for (BlockPos log : logs) steps.put(log, 0);
+        // Corners and edges as well as faces: an azalea's blob of a crown has leaves joined to the
+        // rest only at a corner, and a walk along faces alone left them hanging where the old crown
+        // was. A step this way is never longer than the game's own count, so the distance test
+        // below still only leaves a leaf behind when a neighbour's log is plainly nearer.
+        while (!frontier.isEmpty()) {
+            BlockPos at = frontier.poll();
+            int step = steps.get(at) + 1;
+            for (BlockPos cursor : BlockPos.betweenClosed(at.offset(-1, -1, -1), at.offset(1, 1, 1))) {
+                BlockPos next = cursor.immutable();
+                if (!box.isInside(next) || steps.containsKey(next)) continue;
+                BlockState state = stateAt(level, next);
+                if (!state.is(BlockTags.LEAVES) || state.getValue(LeavesBlock.PERSISTENT)) continue;
+                if (state.getValue(LeavesBlock.DISTANCE) < step) continue;
+                leaves.add(next);
+                steps.put(next, step);
+                frontier.add(next);
+            }
+        }
+        return new OwnTree(logs, leaves);
+    }
+
+    /**
+     * What hung from blocks that have just been taken away - vines, a mangrove's propagules, a
+     * fungus's weeping vines - taken away with them, a hanging length at a time.
+     */
+    static void dropUnsupported(LevelAccessor level, Set<BlockPos> removed) {
+        if (!(level instanceof net.minecraft.world.level.LevelReader reader)) return;
+        ArrayDeque<BlockPos> queue = new ArrayDeque<>();
+        for (BlockPos pos : removed) for (Direction direction : Direction.values()) queue.add(pos.relative(direction));
+        Set<BlockPos> seen = new HashSet<>();
+        while (!queue.isEmpty()) {
+            BlockPos at = queue.poll();
+            if (!seen.add(at) || !reachableAround(at)) continue;
+            BlockState state = level.getBlockState(at);
+            if (!(state.is(Blocks.VINE) || state.is(Blocks.MANGROVE_PROPAGULE)
+                    || state.is(Blocks.WEEPING_VINES) || state.is(Blocks.WEEPING_VINES_PLANT))) continue;
+            if (state.canSurvive(reader, at)) continue;
+            setGuarded(level, at, Blocks.AIR.defaultBlockState(), 4);
+            queue.add(at.below());
+            for (Direction side : Direction.Plane.HORIZONTAL) queue.add(at.relative(side));
+        }
+    }
+
+    /** Whether a block and everything beside it may be read, which is what asking if it survives does. */
+    private static boolean reachableAround(BlockPos pos) {
+        if (!AncientTrees.reachable(pos)) return false;
+        for (Direction direction : Direction.values()) if (!AncientTrees.reachable(pos.relative(direction))) return false;
+        return true;
+    }
+
     private static BlockState stateAt(LevelAccessor level, BlockPos pos) {
         if (!AncientTrees.reachable(pos)) return Blocks.AIR.defaultBlockState();
 

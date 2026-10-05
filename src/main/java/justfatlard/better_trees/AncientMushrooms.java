@@ -32,13 +32,18 @@ public final class AncientMushrooms {
 		boolean worldgen = level instanceof WorldGenRegion;
 		if (worldgen) AncientTrees.limitReachTo(origin);
 		try {
-			boolean ancient = worldgen && random.nextFloat() < AncientTrees.WORLDGEN_ANCIENT_CHANCE;
-			if (ancient) amplify(level, random, origin, stem, cap, glow);
-			closeCorners(level, origin, cap, ancient ? 16 : 8, ancient ? 65 : 16);
-			LeafStairsProcessor.process(level, origin, random, ancient);
+			finish(level, random, origin, stem, cap, glow, worldgen && random.nextFloat() < AncientTrees.WORLDGEN_ANCIENT_CHANCE);
 		} finally {
 			if (worldgen) AncientTrees.clearReachLimit();
 		}
+	}
+
+	/** Everything after the game's own mushroom: ancient or not, the corners closed and the cap stepped. */
+	public static void finish(WorldGenLevel level, RandomSource random, BlockPos origin,
+			BlockState stem, BlockState cap, BlockState glow, boolean ancient) {
+		if (ancient) amplify(level, random, origin, stem, cap, glow);
+		closeCorners(level, origin, cap, ancient ? 16 : 8, ancient ? 65 : 16);
+		LeafStairsProcessor.process(level, origin, random, ancient);
 	}
 
 	/**
@@ -91,6 +96,10 @@ public final class AncientMushrooms {
 		while (level.getBlockState(top.above()).is(stem.getBlock()) && top.getY() - origin.getY() < 40) top = top.above();
 		int height = top.getY() - origin.getY() + 1;
 
+		// The cap the game gave it comes off first: the ancient one goes on a stem twice the height,
+		// and the old would be left as a ring of cap round the stem's middle.
+		clearCap(level, origin, top, cap, glow);
+
 		// Thickened to three across the whole way, and carried on up.
 		int extension = glow != null ? 10 + random.nextInt(4) : 7 + random.nextInt(4);
 		for (int y = 0; y < height + extension; y++) {
@@ -119,6 +128,32 @@ public final class AncientMushrooms {
 			disc(level, random, crown.above(1), 5, cap, null, 0);
 			disc(level, random, crown.above(2), 3, cap, null, 0);
 		}
+	}
+
+	/**
+	 * The cap the game put on this stem, gone: every block of cap, cap stair, shroomlight and
+	 * weeping vine in the space it can fill, which is four out from the stem at most and as high as
+	 * the stem goes.
+	 *
+	 * <p>The space, rather than what is joined to the stem: inside its shell a fungus's cap is
+	 * scattered, a block here and there with air all round it and a vine hanging from it, and a walk
+	 * along what touches left those behind, inside the ancient's trunk. A neighbour's cap reaching
+	 * this close loses its edge, as it would to the ancient's own cap, twice as wide, an instant later.
+	 */
+	private static void clearCap(WorldGenLevel level, BlockPos origin, BlockPos top, BlockState cap, BlockState glow) {
+		Block stairs = Main.CAP_STAIRS_MAP.get(cap.getBlock());
+		java.util.Set<BlockPos> cleared = new java.util.HashSet<>();
+		for (BlockPos pos : BlockPos.betweenClosed(origin.offset(-4, 1, -4), top.offset(4, 3, 4))) {
+			if (!AncientTrees.reachable(pos)) continue;
+			BlockState state = level.getBlockState(pos);
+			boolean old = state.is(cap.getBlock()) || (glow != null && state.is(glow.getBlock()))
+				|| (stairs != null && state.is(stairs))
+				|| state.is(Blocks.WEEPING_VINES) || state.is(Blocks.WEEPING_VINES_PLANT);
+			if (!old) continue;
+			level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+			cleared.add(pos.immutable());
+		}
+		LeafStairsProcessor.dropUnsupported(level, cleared);
 	}
 
 	/** A filled circle at a height; the rim of a fungus's storey gets its share of glow. */

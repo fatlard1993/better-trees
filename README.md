@@ -57,6 +57,8 @@ An ancient conifer's cone has to clear its own trunk, so the shape holds up rath
 
 **Every vanilla tree can be ancient**, each in its own shape: oak's spreading heads, acacia's umbrellas, cherry's cloud, birch's slim column, jungle's emergent crowns, mangrove's paired crowns, and poplar as the Lombardy column it is in life, several times taller than it is wide. Spruce rolls evens between vanilla's two big forms: the mega spruce, bushy to the ground, and the mega pine, a bare trunk with its crown at the top. Where vanilla has a bigger form the ancient grows from it; where it has none, from the tree already standing, which is also how a yellow poplar or an azalea keeps its own leaves.
 
+An ancient wears one crown, at the top. The crown of the tree it grew from comes off first, rather than being left round the foot of a much taller trunk, except on a spruce or a poplar, whose new foliage carries on down from the old as one cone or one column. Only that tree's own leaves come off: a leaf a neighbour's log holds up stays put.
+
 Huge mushrooms and huge fungi go ancient at the same odds: a red mushroom as a domed cap on a thick stem twice the height, a brown one as a plate the width of a house, a crimson or warped fungus as a stem a dozen blocks taller under a pagoda of wart lit through with shroomlight.
 
 ## Self-Seeding Saplings
