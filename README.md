@@ -5,8 +5,6 @@ A Minecraft Fabric mod. Canopies that taper instead of ending in a flat cube, an
 
 ## Screenshots
 
-![An ancient oak: a trunk of many logs under a spreading head](ancient.png)
-![A huge red mushroom and a brown one, their caps finished with stairs the way a canopy is](mushrooms.png)
 
 ## What This Mod Does
 
