@@ -3,9 +3,6 @@
 A Minecraft Fabric mod. Canopies that taper instead of ending in a flat cube, and saplings that behave like seeds.
 
 
-## Screenshots
-
-
 ## What This Mod Does
 
 A vanilla tree stops dead at the edge of its outermost leaf block, which from any distance reads as a green box with a trunk under it. This replaces those edge leaves with **stair-shaped leaves**, so a canopy rounds off the way a real one does. It is a small change made in a lot of places at once, and the result is a skyline rather than a stack of cubes.
