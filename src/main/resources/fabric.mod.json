@@ -33,5 +33,12 @@
 		"homepage": "https://github.com/fatlard1993/better-trees",
 		"sources": "https://github.com/fatlard1993/better-trees",
 		"issues": "https://github.com/fatlard1993/better-trees/issues"
+	},
+	"custom": {
+		"modmenu": {
+			"links": {
+				"modmenu.donate": "https://github.com/sponsors/fatlard1993"
+			}
+		}
 	}
 }
