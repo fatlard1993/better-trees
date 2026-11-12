@@ -1,0 +1,38 @@
+{
+  "demo": {
+    "name": "Better Trees",
+    "icon": "minecraft:oak_sapling",
+    "about": [
+      "Tree canopies that taper at the edges with leaf stairs, leaves that only hold on to their own kind of wood, and saplings that plant themselves.",
+      "Look up at the forest, grow a few saplings with bone meal, and fell a tree to watch its crown come down. Drop a sapling on the grass and leave it a minute to see it take root."
+    ]
+  },
+  "pvp_preset": 1,
+  "needs": ["better-trees-justfatlard"],
+  "preset": {
+    "name": "Better Trees",
+    "icon": "minecraft:oak_sapling",
+    "pvp": false,
+    "game_mode": "survival",
+    "entry_kit": [
+      {"slot": 0, "item": {"id": "minecraft:iron_axe", "count": 1}},
+      {"slot": 1, "item": {"id": "minecraft:bone_meal", "count": 64}},
+      {"slot": 2, "item": {"id": "minecraft:oak_sapling", "count": 8}},
+      {"slot": 3, "item": {"id": "minecraft:birch_sapling", "count": 8}},
+      {"slot": 4, "item": {"id": "minecraft:cherry_sapling", "count": 8}},
+      {"slot": 5, "item": {"id": "minecraft:spruce_sapling", "count": 8}},
+      {"slot": 6, "item": {"id": "minecraft:dark_oak_sapling", "count": 8}},
+      {"slot": 7, "item": {"id": "minecraft:dirt", "count": 32}},
+      {"slot": 8, "item": {"id": "minecraft:cooked_beef", "count": 8}}
+    ],
+    "respawn_kit": "entry",
+    "goal": "time",
+    "mobs": "off",
+    "life": 15,
+    "size": 4,
+    "world": "overworld",
+    "shape": "natural",
+    "biome": "minecraft:forest",
+    "weather": "clear"
+  }
+}
