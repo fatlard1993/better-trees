@@ -3,6 +3,9 @@
 		"Canopies that taper off instead of ending in a flat green cube, trees that now and then grow far larger than they should, and saplings that plant themselves."
 	],
 	"versions": {
+		"1.2.6": [
+			"A demo to play in PvP Dimensions' onboarding."
+		],
 		"1.2.5": [
 			"Drop changelog notes for changes nothing in the game shows."
 		],
