@@ -3,6 +3,9 @@
 		"Canopies that taper off instead of ending in a flat green cube, trees that now and then grow far larger than they should, and saplings that plant themselves."
 	],
 	"versions": {
+		"1.2.7": [
+			"A tree generating with the world only re-sends blocks it put into a neighbouring chunk, and a sapling growing re-sends nothing twice."
+		],
 		"1.2.6": [
 			"A demo to play in PvP Dimensions' onboarding."
 		],
