@@ -32,16 +32,20 @@ public class TreeFeatureMixin {
         // a sapling growing in a world where everything around it is already loaded and there is
         // nothing to protect. Both arrive here as WorldGenLevel, so the distinction has to be drawn
         // on the concrete type.
-        boolean fenced = level instanceof WorldGenRegion;
-        if (fenced) AncientTrees.limitReachTo(pos);
-        // Worldgen tells no client anything, so what it writes is kept and broadcast afterwards.
-        AncientTrees.collectWrites();
-
-        try {
-            postProcess(level, chunkGenerator, random, pos, fenced);
-        } finally {
-            if (fenced) AncientTrees.clearReachLimit();
-            AncientTrees.tellClients(level);
+        //
+        // Worldgen tells no client anything, so what it writes into a neighbour is kept and
+        // broadcast afterwards; a live level tells them as it writes.
+        if (level instanceof WorldGenRegion region) {
+            AncientTrees.limitReachTo(pos);
+            AncientTrees.collectWrites(region.getCenter());
+            try {
+                postProcess(level, chunkGenerator, random, pos, true);
+            } finally {
+                AncientTrees.clearReachLimit();
+                AncientTrees.tellClients(level);
+            }
+        } else {
+            postProcess(level, chunkGenerator, random, pos, false);
         }
     }
 

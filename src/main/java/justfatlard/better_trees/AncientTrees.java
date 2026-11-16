@@ -7,6 +7,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.levelgen.feature.Feature;
@@ -104,20 +105,26 @@ public class AncientTrees {
      * into them routinely. Those blocks are in the world and absent from the screen until the chunk
      * reloads, which is the hole fatlard saw on the server.
      *
-     * <p>So the positions are kept, and {@link #tellClients} hands them to the server thread to
-     * re-broadcast once the placement is done. A chunk nobody is tracking ignores the lot.
+     * <p>So the positions that land in a neighbour are kept, and {@link #tellClients} hands them to
+     * the server thread to re-broadcast once the placement is done. A chunk nobody is tracking
+     * ignores the lot.
      */
     private static final ThreadLocal<List<BlockPos>> WRITTEN = new ThreadLocal<>();
 
-    /** Start keeping a note of what gets written, for a placement that is about to happen. */
-    public static void collectWrites() {
+    /** The chunk being generated, which no client has yet; writes into it are not kept. */
+    private static final ThreadLocal<ChunkPos> UNSENT = new ThreadLocal<>();
+
+    /** Start keeping a note of what gets written outside {@code unsent}, for a placement about to happen. */
+    public static void collectWrites(ChunkPos unsent) {
         WRITTEN.set(new ArrayList<>());
+        UNSENT.set(unsent);
     }
 
     /** Note one write; does nothing unless somebody is collecting. */
     public static void wrote(BlockPos pos) {
         List<BlockPos> written = WRITTEN.get();
-        if (written != null) written.add(pos.immutable());
+        if (written == null || ChunkPos.pack(pos) == UNSENT.get().pack()) return;
+        written.add(pos.immutable());
     }
 
     /**
@@ -129,6 +136,7 @@ public class AncientTrees {
     public static void tellClients(LevelAccessor level) {
         List<BlockPos> written = WRITTEN.get();
         WRITTEN.remove();
+        UNSENT.remove();
         if (written == null || written.isEmpty()) return;
         if (!(level instanceof ServerLevelAccessor access)) return;
 
