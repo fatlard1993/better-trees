@@ -61,6 +61,10 @@ Better Trees registers its leaf stairs through Pandorical — each one standing 
 
 With [block-tip](https://github.com/fatlard1993/block-tip) installed, a leaf stair names itself as the leaf it is.
 
+## Works with other mods
+
+Leaves Be Gone hurries leaf decay too, which Better Trees already does for felled crowns; its manifest lists it as a conflict, so the loader says so at startup.
+
 ## Development
 
 Installing, building and the map of the source are in [DEVELOPMENT.md](DEVELOPMENT.md).

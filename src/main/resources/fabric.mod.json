@@ -34,6 +34,9 @@
 		"sources": "https://github.com/fatlard1993/better-trees",
 		"issues": "https://github.com/fatlard1993/better-trees/issues"
 	},
+	"conflicts": {
+		"leavesbegone": "*"
+	},
 	"custom": {
 		"modmenu": {
 			"links": {
