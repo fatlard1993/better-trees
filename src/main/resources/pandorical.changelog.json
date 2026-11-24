@@ -3,6 +3,9 @@
 		"Canopies that taper off instead of ending in a flat green cube, trees that now and then grow far larger than they should, and saplings that plant themselves."
 	],
 	"versions": {
+		"1.2.8": [
+			"The mods that do the same job are listed as conflicts, so the loader says so at startup, and the readme says why."
+		],
 		"1.2.7": [
 			"A tree generating with the world only re-sends blocks it put into a neighbouring chunk, and a sapling growing re-sends nothing twice."
 		],
